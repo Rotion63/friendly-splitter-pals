@@ -91,8 +91,8 @@ const SplitSummary: React.FC = () => {
             const participant = bill.participants.find(p => p.id === participantId);
             if (!participant) return null;
             
-            const isPayingUser = participantId !== bill.paidBy;
-            const isPaidBy = participantId === bill.paidBy;
+            const isReceivingMoney = amount > 0;
+            const isPayingMoney = amount < 0;
             
             return (
               <motion.div
@@ -104,14 +104,14 @@ const SplitSummary: React.FC = () => {
                   delay: index * 0.1,
                 }}
                 className={`flex items-center justify-between p-4 rounded-lg ${
-                  isPaidBy
+                  isReceivingMoney
                     ? "bg-primary/10 border border-primary/20"
                     : "bg-white shadow-soft"
                 }`}
               >
                 <div className="flex items-center">
                   <div className={`h-10 w-10 rounded-full flex items-center justify-center mr-3 ${
-                    isPaidBy ? "bg-primary/20 text-primary" : "bg-muted"
+                    isReceivingMoney ? "bg-primary/20 text-primary" : "bg-muted"
                   }`}>
                     {participant.avatar ? (
                       <img 
@@ -125,20 +125,23 @@ const SplitSummary: React.FC = () => {
                   </div>
                   <div>
                     <div className="font-medium">{participant.name}</div>
-                    {isPaidBy && (
-                      <div className="text-xs text-primary">Paid the bill</div>
+                    {isReceivingMoney && (
+                      <div className="text-xs text-primary">Receives money</div>
+                    )}
+                    {isPayingMoney && (
+                      <div className="text-xs text-destructive">Owes money</div>
                     )}
                   </div>
                 </div>
                 
                 <div className={`flex items-center ${
-                  isPaidBy
+                  isReceivingMoney
                     ? "text-primary font-medium"
-                    : isPayingUser 
+                    : isPayingMoney 
                       ? "text-destructive font-medium"
                       : "text-muted-foreground"
                 }`}>
-                  {isPaidBy ? (
+                  {isReceivingMoney ? (
                     <ArrowDown className="h-4 w-4 mr-1" />
                   ) : (
                     <ArrowUp className="h-4 w-4 mr-1" />

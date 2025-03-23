@@ -1,4 +1,3 @@
-
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { Bill, Participant } from "./types";
@@ -32,21 +31,14 @@ export function calculateSplits(bill: Bill): Record<string, number> {
     if (item.participants.length > 0) {
       const perPersonAmount = item.amount / item.participants.length;
       item.participants.forEach(pId => {
-        result[pId] = (result[pId] || 0) + perPersonAmount;
+        result[pId] = (result[pId] || 0) - perPersonAmount; // Negative means they owe this amount
       });
     }
   });
   
-  // If someone paid the whole bill, calculate what others owe them
+  // If someone paid the whole bill, they get credited with the total amount
   if (bill.paidBy) {
-    bill.participants.forEach(p => {
-      if (p.id !== bill.paidBy) {
-        result[p.id] = result[p.id];
-      } else {
-        // The person who paid gets credited
-        result[p.id] = result[p.id] - bill.totalAmount;
-      }
-    });
+    result[bill.paidBy] = (result[bill.paidBy] || 0) + bill.totalAmount;
   }
   
   return result;
