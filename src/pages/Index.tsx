@@ -6,10 +6,11 @@ import Layout from "@/components/Layout";
 import BillCard from "@/components/SplitBill/BillCard";
 import NewSplitButton from "@/components/SplitBill/NewSplitButton";
 import FriendsList from "@/components/SplitBill/FriendsList";
+import UserGuide from "@/components/SplitBill/UserGuide";
 import { generateId } from "@/lib/utils";
 import { Bill, Participant } from "@/lib/types";
 import { getFriends, addFriend, removeFriend } from "@/lib/friendsStorage";
-import { getBills, removeBill } from "@/lib/billStorage";
+import { getBills, removeBill, saveBill } from "@/lib/billStorage";
 import { Info, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -18,6 +19,7 @@ const Index: React.FC = () => {
   const [friends, setFriends] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDummyBill, setShowDummyBill] = useState(true);
+  const [showGuide, setShowGuide] = useState(false);
 
   useEffect(() => {
     // Load friends from storage
@@ -46,6 +48,14 @@ const Index: React.FC = () => {
       isDummy: true
     };
     
+    // Save the dummy bill to localStorage if there are no real bills
+    if (realBills.length === 0 && showDummyBill) {
+      const existingDummyBill = getBills().find(bill => bill.id === "dummy-bill");
+      if (!existingDummyBill) {
+        saveBill(dummyBill);
+      }
+    }
+    
     setTimeout(() => {
       if (realBills.length > 0) {
         setBills(realBills);
@@ -55,12 +65,19 @@ const Index: React.FC = () => {
       }
       setLoading(false);
     }, 800);
+    
+    // Show guide for first-time users
+    const hasSeenGuide = localStorage.getItem('hasSeenGuide');
+    if (!hasSeenGuide) {
+      setShowGuide(true);
+    }
   }, [showDummyBill]);
 
   const handleDeleteBill = (id: string) => {
     if (id === "dummy-bill") {
       setShowDummyBill(false);
       setBills([]);
+      removeBill(id); // Remove from storage too
     } else {
       removeBill(id);
       setBills(bills.filter(bill => bill.id !== id));
@@ -79,6 +96,11 @@ const Index: React.FC = () => {
     setFriends(updatedFriends);
     toast.success("Friend removed");
   };
+  
+  const handleDismissGuide = () => {
+    setShowGuide(false);
+    localStorage.setItem('hasSeenGuide', 'true');
+  };
 
   return (
     <Layout>
@@ -94,6 +116,8 @@ const Index: React.FC = () => {
             Share expenses with friends easily
           </p>
         </motion.div>
+
+        {showGuide && <UserGuide onDismiss={handleDismissGuide} />}
 
         <FriendsList 
           friends={friends}
@@ -125,7 +149,7 @@ const Index: React.FC = () => {
             {bills[0]?.isDummy && (
               <div className="bg-muted/30 rounded-lg py-2 px-3 mb-3 flex items-center text-sm text-muted-foreground">
                 <Info className="h-4 w-4 mr-2 flex-shrink-0" />
-                <p>This is an example bill. Create your own split or click to explore this example.</p>
+                <p>This is an example bill. Click to explore how bill splitting works.</p>
               </div>
             )}
             
