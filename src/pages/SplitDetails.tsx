@@ -3,13 +3,16 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import Layout from "@/components/Layout";
-import { Bill, BillItem } from "@/lib/types";
+import { Bill, BillItem, PartialPayment } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { generateId } from "@/lib/utils";
 import BillItemList from "@/components/SplitBill/BillItemList";
 import AddBillItem from "@/components/SplitBill/AddBillItem";
 import PaidBySelector from "@/components/SplitBill/PaidBySelector";
+import PartialPaymentManager from "@/components/SplitBill/PartialPaymentManager";
+import DiscountInput from "@/components/SplitBill/DiscountInput";
 import { createEmptyBill, getBillById, saveBill } from "@/lib/billStorage";
+import { formatCurrency } from "@/lib/utils";
 
 const SplitDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -20,6 +23,8 @@ const SplitDetails: React.FC = () => {
   const [newItemParticipants, setNewItemParticipants] = useState<string[]>([]);
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [paidBy, setPaidBy] = useState<string>("");
+  const [partialPayments, setPartialPayments] = useState<PartialPayment[]>([]);
+  const [discount, setDiscount] = useState<number>(0);
   
   useEffect(() => {
     if (!id) {
@@ -33,6 +38,8 @@ const SplitDetails: React.FC = () => {
     if (foundBill) {
       setBill(foundBill);
       setPaidBy(foundBill.paidBy || foundBill.participants[0]?.id || "");
+      setPartialPayments(foundBill.partialPayments || []);
+      setDiscount(foundBill.discount || 0);
     } else {
       toast.error("Bill not found");
       navigate("/");
@@ -105,13 +112,50 @@ const SplitDetails: React.FC = () => {
     }
   };
   
+  const handlePartialPaymentsChange = (payments: PartialPayment[]) => {
+    setPartialPayments(payments);
+    if (bill) {
+      const updatedBill = {
+        ...bill,
+        partialPayments: payments
+      };
+      setBill(updatedBill);
+      saveBill(updatedBill);
+    }
+  };
+  
+  const handleDiscountChange = (discountAmount: number) => {
+    setDiscount(discountAmount);
+    if (bill) {
+      const updatedBill = {
+        ...bill,
+        discount: discountAmount
+      };
+      setBill(updatedBill);
+      saveBill(updatedBill);
+    }
+  };
+  
   const handleCalculateSplit = () => {
     if (!bill) return;
     
-    const updatedBill = {
+    // Check if we need to set paidBy (for remaining amount after partial payments)
+    const totalPaid = partialPayments.reduce((sum, payment) => sum + payment.amount, 0);
+    const remainingAmount = bill.totalAmount - totalPaid - discount;
+    
+    let updatedBill = {
       ...bill,
-      paidBy,
+      partialPayments,
+      discount,
     };
+    
+    // If there's remaining amount to be paid and we have a paidBy, include it
+    if (remainingAmount > 0 && paidBy) {
+      updatedBill.paidBy = paidBy;
+    } else if (partialPayments.length > 0) {
+      // If everything is covered by partial payments, we don't need paidBy
+      delete updatedBill.paidBy;
+    }
     
     saveBill(updatedBill);
     navigate(`/split-summary/${bill.id}`);
@@ -129,6 +173,11 @@ const SplitDetails: React.FC = () => {
       </Layout>
     );
   }
+  
+  // Calculate total after partial payments
+  const totalPaid = partialPayments.reduce((sum, payment) => sum + payment.amount, 0);
+  const remainingAmount = bill.totalAmount - totalPaid - discount;
+  const showPaidBy = remainingAmount > 0;
   
   return (
     <Layout showBackButton title={bill.title}>
@@ -161,11 +210,29 @@ const SplitDetails: React.FC = () => {
           />
         </div>
         
-        <PaidBySelector 
-          participants={bill.participants}
-          paidBy={paidBy}
-          onPaidByChange={setPaidBy}
+        {/* Add the discount input */}
+        <DiscountInput 
+          totalAmount={bill.totalAmount}
+          discount={discount}
+          onDiscountChange={handleDiscountChange}
         />
+        
+        {/* Add the partial payment manager */}
+        <PartialPaymentManager 
+          participants={bill.participants}
+          partialPayments={partialPayments}
+          totalAmount={bill.totalAmount - discount}
+          onPartialPaymentsChange={handlePartialPaymentsChange}
+        />
+        
+        {/* Only show the PaidBy selector if there's remaining amount */}
+        {showPaidBy && (
+          <PaidBySelector 
+            participants={bill.participants}
+            paidBy={paidBy}
+            onPaidByChange={setPaidBy}
+          />
+        )}
         
         <Button 
           className="w-full py-6 text-lg"
@@ -178,8 +245,5 @@ const SplitDetails: React.FC = () => {
     </Layout>
   );
 };
-
-// Import the formatCurrency util
-import { formatCurrency } from "@/lib/utils";
 
 export default SplitDetails;

@@ -12,6 +12,11 @@ export interface BillItem {
   participants: string[]; // Participant IDs
 }
 
+export interface PartialPayment {
+  payerId: string;
+  amount: number;
+}
+
 export interface Bill {
   id: string;
   title: string;
@@ -20,5 +25,7 @@ export interface Bill {
   participants: Participant[];
   items: BillItem[];
   paidBy?: string; // Participant ID
+  partialPayments?: PartialPayment[]; // For multiple people paying
+  discount?: number; // Discount amount (not percentage)
   isDummy?: boolean; // Flag to identify dummy bills
 }

@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
 import { calculateSplits, formatCurrency } from "@/lib/utils";
 import { Bill } from "@/lib/types";
-import { ArrowDown, ArrowUp, User } from "lucide-react";
+import { ArrowDown, ArrowUp, User, ReceiptPercent, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { getBillById } from "@/lib/billStorage";
@@ -60,6 +60,9 @@ const SplitSummary: React.FC = () => {
   }
   
   const paidByPerson = bill.participants.find(p => p.id === bill.paidBy);
+  const hasDiscount = bill.discount && bill.discount > 0;
+  const hasPartialPayments = bill.partialPayments && bill.partialPayments.length > 0;
+  const effectiveAmount = bill.totalAmount - (bill.discount || 0);
   
   return (
     <Layout showBackButton title="Summary">
@@ -75,14 +78,70 @@ const SplitSummary: React.FC = () => {
             {new Date(bill.date).toLocaleDateString()}
           </p>
           
-          <div className="text-3xl font-bold mb-4">
+          <div className="text-3xl font-bold mb-2">
             {formatCurrency(bill.totalAmount)}
           </div>
           
-          <p className="text-sm text-muted-foreground">
-            Paid by {paidByPerson?.name || "Unknown"}
-          </p>
+          {hasDiscount && (
+            <div className="flex items-center justify-center gap-1 text-green-600 mb-2">
+              <ReceiptPercent className="h-4 w-4" />
+              <span className="text-sm">
+                Discount: {formatCurrency(bill.discount || 0)}
+              </span>
+            </div>
+          )}
+          
+          {hasDiscount && (
+            <div className="text-xl font-medium mb-4">
+              Final: {formatCurrency(effectiveAmount)}
+            </div>
+          )}
+          
+          {hasPartialPayments ? (
+            <div className="text-sm text-muted-foreground">
+              <Wallet className="h-4 w-4 inline-block mr-1" />
+              <span>Paid by multiple people</span>
+            </div>
+          ) : paidByPerson ? (
+            <p className="text-sm text-muted-foreground">
+              Paid by {paidByPerson.name}
+            </p>
+          ) : null}
         </motion.div>
+        
+        {hasPartialPayments && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.1 }}
+            className="mb-6"
+          >
+            <h3 className="text-lg font-medium mb-3">Payment Contributions</h3>
+            <div className="space-y-2 mb-4">
+              {bill.partialPayments?.map((payment, index) => {
+                const payer = bill.participants.find(p => p.id === payment.payerId);
+                return (
+                  <div key={index} className="flex items-center justify-between bg-white p-3 rounded-lg shadow-soft">
+                    <span>{payer?.name || "Unknown"}</span>
+                    <span className="font-medium">{formatCurrency(payment.amount)}</span>
+                  </div>
+                );
+              })}
+              
+              {bill.paidBy && (
+                <div className="flex items-center justify-between bg-white p-3 rounded-lg shadow-soft">
+                  <span>{paidByPerson?.name || "Unknown"}</span>
+                  <span className="font-medium">
+                    {formatCurrency(
+                      effectiveAmount - 
+                      (bill.partialPayments?.reduce((sum, p) => sum + p.amount, 0) || 0)
+                    )}
+                  </span>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
         
         <h3 className="text-lg font-medium mb-3">Split Summary</h3>
         
@@ -93,6 +152,7 @@ const SplitSummary: React.FC = () => {
             
             const isReceivingMoney = amount > 0;
             const isPayingMoney = amount < 0;
+            const formattedAmount = formatCurrency(Math.abs(amount));
             
             return (
               <motion.div
@@ -131,6 +191,9 @@ const SplitSummary: React.FC = () => {
                     {isPayingMoney && (
                       <div className="text-xs text-destructive">Owes money</div>
                     )}
+                    {!isReceivingMoney && !isPayingMoney && (
+                      <div className="text-xs text-muted-foreground">Settled up</div>
+                    )}
                   </div>
                 </div>
                 
@@ -143,11 +206,11 @@ const SplitSummary: React.FC = () => {
                 }`}>
                   {isReceivingMoney ? (
                     <ArrowDown className="h-4 w-4 mr-1" />
-                  ) : (
+                  ) : isPayingMoney ? (
                     <ArrowUp className="h-4 w-4 mr-1" />
-                  )}
+                  ) : null}
                   <span>
-                    {formatCurrency(Math.abs(amount))}
+                    {formattedAmount}
                   </span>
                 </div>
               </motion.div>

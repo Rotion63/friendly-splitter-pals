@@ -1,7 +1,7 @@
 
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { Bill, Participant } from "./types";
+import { Bill, Participant, PartialPayment } from "./types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -27,19 +27,33 @@ export function calculateSplits(bill: Bill): Record<string, number> {
     result[p.id] = 0;
   });
   
+  // Apply discount if any
+  const discountAmount = bill.discount || 0;
+  const effectiveTotalAmount = bill.totalAmount - discountAmount;
+  
   // Calculate what each person owes for their items
   bill.items.forEach(item => {
     if (item.participants.length > 0) {
-      const perPersonAmount = item.amount / item.participants.length;
+      // If there's a discount, we need to proportionally reduce each item
+      const discountFactor = effectiveTotalAmount / bill.totalAmount;
+      const adjustedAmount = item.amount * discountFactor;
+      const perPersonAmount = adjustedAmount / item.participants.length;
+      
       item.participants.forEach(pId => {
         result[pId] = (result[pId] || 0) - perPersonAmount; // Negative means they owe this amount
       });
     }
   });
   
-  // If someone paid the whole bill, they get credited with the total amount
-  if (bill.paidBy) {
-    result[bill.paidBy] = (result[bill.paidBy] || 0) + bill.totalAmount;
+  // Handle partial payments if any
+  if (bill.partialPayments && bill.partialPayments.length > 0) {
+    bill.partialPayments.forEach(payment => {
+      result[payment.payerId] = (result[payment.payerId] || 0) + payment.amount;
+    });
+  } 
+  // If there's a single payer for the remainder
+  else if (bill.paidBy) {
+    result[bill.paidBy] = (result[bill.paidBy] || 0) + effectiveTotalAmount;
   }
   
   return result;
