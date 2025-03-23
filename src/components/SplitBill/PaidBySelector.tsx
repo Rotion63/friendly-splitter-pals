@@ -14,9 +14,16 @@ const PaidBySelector: React.FC<PaidBySelectorProps> = ({
   paidBy, 
   onPaidByChange 
 }) => {
+  if (participants.length === 0) {
+    return null;
+  }
+  
   return (
     <div className="glass-panel rounded-xl p-4 mb-6">
       <h2 className="text-lg font-medium mb-3">Paid By</h2>
+      <p className="text-sm text-muted-foreground mb-3">
+        Select who paid for the whole bill initially
+      </p>
       
       <div className="space-y-2">
         {participants.map((participant) => (
@@ -40,7 +47,12 @@ const PaidBySelector: React.FC<PaidBySelectorProps> = ({
                 <User className="h-4 w-4" />
               )}
             </div>
-            <span>{participant.name}</span>
+            <div>
+              <span className="font-medium">{participant.name}</span>
+              {paidBy === participant.id && (
+                <p className="text-xs text-primary">Paid the full amount</p>
+              )}
+            </div>
           </div>
         ))}
       </div>

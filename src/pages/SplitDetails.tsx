@@ -1,14 +1,15 @@
 
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
 import Layout from "@/components/Layout";
 import { Bill, BillItem } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { generateId, sampleBills } from "@/lib/utils";
+import { generateId } from "@/lib/utils";
 import BillItemList from "@/components/SplitBill/BillItemList";
 import AddBillItem from "@/components/SplitBill/AddBillItem";
 import PaidBySelector from "@/components/SplitBill/PaidBySelector";
-import { getFriends } from "@/lib/friendsStorage";
+import { createEmptyBill, getBillById, saveBill } from "@/lib/billStorage";
 
 const SplitDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -21,14 +22,22 @@ const SplitDetails: React.FC = () => {
   const [paidBy, setPaidBy] = useState<string>("");
   
   useEffect(() => {
-    // In a real app, fetch the bill from storage
-    const foundBill = sampleBills.find(b => b.id === id) || sampleBills[0];
+    if (!id) {
+      navigate("/");
+      return;
+    }
+    
+    // Get bill from storage
+    const foundBill = getBillById(id);
     
     if (foundBill) {
       setBill(foundBill);
-      setPaidBy(foundBill.paidBy || foundBill.participants[0].id);
+      setPaidBy(foundBill.paidBy || foundBill.participants[0]?.id || "");
+    } else {
+      toast.error("Bill not found");
+      navigate("/");
     }
-  }, [id]);
+  }, [id, navigate]);
   
   const handleAddItem = () => {
     if (!bill || !newItemName.trim() || !newItemAmount || newItemParticipants.length === 0) {
@@ -54,6 +63,8 @@ const SplitDetails: React.FC = () => {
     };
     
     setBill(updatedBill);
+    saveBill(updatedBill); // Save updated bill to storage
+    
     setNewItemName("");
     setNewItemAmount("");
     setNewItemParticipants([]);
@@ -73,6 +84,7 @@ const SplitDetails: React.FC = () => {
     };
     
     setBill(updatedBill);
+    saveBill(updatedBill); // Save updated bill to storage
   };
   
   const handleParticipantToggle = (participantId: string) => {
@@ -101,7 +113,7 @@ const SplitDetails: React.FC = () => {
       paidBy,
     };
     
-    // In a real app, save the updated bill
+    saveBill(updatedBill);
     navigate(`/split-summary/${bill.id}`);
   };
   
@@ -167,7 +179,7 @@ const SplitDetails: React.FC = () => {
   );
 };
 
-// Missing import in the refactored file
+// Import the formatCurrency util
 import { formatCurrency } from "@/lib/utils";
 
 export default SplitDetails;

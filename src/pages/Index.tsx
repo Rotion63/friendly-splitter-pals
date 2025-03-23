@@ -6,34 +6,65 @@ import Layout from "@/components/Layout";
 import BillCard from "@/components/SplitBill/BillCard";
 import NewSplitButton from "@/components/SplitBill/NewSplitButton";
 import FriendsList from "@/components/SplitBill/FriendsList";
-import { sampleBills } from "@/lib/utils";
+import { generateId } from "@/lib/utils";
 import { Bill, Participant } from "@/lib/types";
 import { getFriends, addFriend, removeFriend } from "@/lib/friendsStorage";
+import { getBills, removeBill } from "@/lib/billStorage";
+import { Info, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const Index: React.FC = () => {
   const [bills, setBills] = useState<Bill[]>([]);
   const [friends, setFriends] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showDummyBill, setShowDummyBill] = useState(true);
 
   useEffect(() => {
     // Load friends from storage
     setFriends(getFriends());
     
-    // Create one dummy bill or load real bills later
-    const dummyBill = {
-      ...sampleBills[0],
-      isDummy: true,
-      title: "Dinner with Friends (Example)"
+    // Load real bills from storage
+    const realBills = getBills();
+    
+    // Create one dummy bill if no real bills exist
+    const dummyBill: Bill = {
+      id: "dummy-bill",
+      title: "Dinner with Friends (Example)",
+      date: new Date().toISOString(),
+      totalAmount: 126.80,
+      participants: [
+        { id: "dummy-p1", name: "You" },
+        { id: "dummy-p2", name: "Friend 1" },
+        { id: "dummy-p3", name: "Friend 2" }
+      ],
+      items: [
+        { id: "dummy-item1", name: "Shared Appetizers", amount: 24.95, participants: ["dummy-p1", "dummy-p2", "dummy-p3"] },
+        { id: "dummy-item2", name: "Main Courses", amount: 78.85, participants: ["dummy-p1", "dummy-p2", "dummy-p3"] },
+        { id: "dummy-item3", name: "Dessert", amount: 23.00, participants: ["dummy-p1", "dummy-p2"] }
+      ],
+      paidBy: "dummy-p1",
+      isDummy: true
     };
     
     setTimeout(() => {
-      setBills([dummyBill]);
+      if (realBills.length > 0) {
+        setBills(realBills);
+        setShowDummyBill(false);
+      } else if (showDummyBill) {
+        setBills([dummyBill]);
+      }
       setLoading(false);
     }, 800);
-  }, []);
+  }, [showDummyBill]);
 
   const handleDeleteBill = (id: string) => {
-    setBills(bills.filter(bill => bill.id !== id));
+    if (id === "dummy-bill") {
+      setShowDummyBill(false);
+      setBills([]);
+    } else {
+      removeBill(id);
+      setBills(bills.filter(bill => bill.id !== id));
+    }
     toast.success("Bill deleted successfully");
   };
 
@@ -72,16 +103,32 @@ const Index: React.FC = () => {
 
         {loading ? (
           <div className="space-y-4">
-            {[1].map((i) => (
-              <div 
-                key={i}
-                className="rounded-xl bg-muted/50 h-32 animate-pulse-soft"
-              />
-            ))}
+            <div className="rounded-xl bg-muted/50 h-32 animate-pulse-soft" />
           </div>
         ) : bills.length > 0 ? (
           <div>
-            <h2 className="text-lg font-medium mb-4">Recent Splits</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-medium">Recent Splits</h2>
+              {bills.length === 1 && bills[0].isDummy && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-xs text-muted-foreground"
+                  onClick={() => handleDeleteBill("dummy-bill")}
+                >
+                  <X className="h-3.5 w-3.5 mr-1" />
+                  Remove Example
+                </Button>
+              )}
+            </div>
+            
+            {bills[0]?.isDummy && (
+              <div className="bg-muted/30 rounded-lg py-2 px-3 mb-3 flex items-center text-sm text-muted-foreground">
+                <Info className="h-4 w-4 mr-2 flex-shrink-0" />
+                <p>This is an example bill. Create your own split or click to explore this example.</p>
+              </div>
+            )}
+            
             <div>
               {bills.map((bill, index) => (
                 <BillCard 

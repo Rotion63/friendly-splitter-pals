@@ -8,23 +8,28 @@ import AddParticipant from "@/components/SplitBill/AddParticipant";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { generateId } from "@/lib/utils";
-import { Bill, Participant } from "@/lib/types";
+import { Participant } from "@/lib/types";
 import { getFriends } from "@/lib/friendsStorage";
-import { UserPlus } from "lucide-react";
+import { UserPlus, AlertCircle } from "lucide-react";
+import { createEmptyBill, saveBill } from "@/lib/billStorage";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const NewSplit: React.FC = () => {
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
-  const [participants, setParticipants] = useState<Participant[]>([
-    { id: generateId("p-"), name: "You" }
-  ]);
+  const [participants, setParticipants] = useState<Participant[]>([]);
   const [friends, setFriends] = useState<Participant[]>([]);
   const [showAddFriends, setShowAddFriends] = useState(false);
   
   useEffect(() => {
     // Load friends from storage
-    setFriends(getFriends());
+    const friendsList = getFriends();
+    setFriends(friendsList);
+    
+    // Auto-add the first friend (yourself) if available
+    if (friendsList.length > 0) {
+      setParticipants([friendsList[0]]);
+    }
   }, []);
   
   const handleAddParticipant = (participant: Participant) => {
@@ -48,26 +53,28 @@ const NewSplit: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!title.trim() || participants.length === 0) {
+    if (!title.trim()) {
+      toast.error("Please enter a title for your split");
       return;
     }
     
-    const newBill: Bill = {
-      id: generateId("bill-"),
-      title: title.trim(),
-      date: new Date().toISOString(),
-      totalAmount: 0, // Will be updated as items are added
-      participants,
-      items: [],
-      paidBy: participants[0].id, // Default to first person (You)
-    };
+    if (participants.length < 2) {
+      toast.error("You need at least 2 participants to split a bill");
+      return;
+    }
     
-    // In a real app, we would save this to storage
+    const newBill = createEmptyBill(title, participants);
+    
+    // Save bill to storage
+    saveBill(newBill);
     console.log("New bill created:", newBill);
     
     // Navigate to bill details page
     navigate(`/split-details/${newBill.id}`);
   };
+  
+  // Function to determine if we should show friend addition guidance
+  const showFriendGuidance = participants.length < 2 && friends.length === 0;
   
   return (
     <Layout showBackButton title="New Split">
@@ -90,6 +97,15 @@ const NewSplit: React.FC = () => {
               required
             />
           </div>
+          
+          {showFriendGuidance && (
+            <Alert variant="default" className="bg-muted/50 border-primary/20">
+              <AlertCircle className="h-4 w-4 text-primary" />
+              <AlertDescription>
+                You need at least 2 participants to split a bill. Add yourself and a friend to continue.
+              </AlertDescription>
+            </Alert>
+          )}
           
           <AddParticipant
             participants={participants}
@@ -138,7 +154,7 @@ const NewSplit: React.FC = () => {
           <Button 
             type="submit" 
             className="w-full py-6 text-lg"
-            disabled={!title.trim() || participants.length === 0}
+            disabled={!title.trim() || participants.length < 2}
           >
             Continue
           </Button>
