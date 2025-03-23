@@ -1,28 +1,42 @@
 
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
-import { calculateSplits, formatCurrency, sampleBills } from "@/lib/utils";
+import { calculateSplits, formatCurrency } from "@/lib/utils";
 import { Bill } from "@/lib/types";
 import { ArrowDown, ArrowUp, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
+import { getBillById } from "@/lib/billStorage";
 
 const SplitSummary: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [bill, setBill] = useState<Bill | null>(null);
   const [splits, setSplits] = useState<Record<string, number>>({});
   
   useEffect(() => {
-    // In a real app, fetch the bill from storage
-    const foundBill = sampleBills.find(b => b.id === id) || sampleBills[0];
+    if (!id) {
+      navigate("/");
+      return;
+    }
+    
+    // Get the bill from local storage instead of sample data
+    const foundBill = getBillById(id);
     
     if (foundBill) {
       setBill(foundBill);
       setSplits(calculateSplits(foundBill));
+    } else {
+      toast({
+        title: "Bill not found",
+        description: "The requested bill could not be found.",
+        variant: "destructive"
+      });
+      navigate("/");
     }
-  }, [id]);
+  }, [id, navigate]);
   
   const handleShare = () => {
     // In a real app, implement sharing functionality
@@ -77,7 +91,7 @@ const SplitSummary: React.FC = () => {
             const participant = bill.participants.find(p => p.id === participantId);
             if (!participant) return null;
             
-            const isPositive = amount >= 0;
+            const isPayingUser = participantId !== bill.paidBy;
             const isPaidBy = participantId === bill.paidBy;
             
             return (
@@ -120,7 +134,9 @@ const SplitSummary: React.FC = () => {
                 <div className={`flex items-center ${
                   isPaidBy
                     ? "text-primary font-medium"
-                    : "text-destructive font-medium"
+                    : isPayingUser 
+                      ? "text-destructive font-medium"
+                      : "text-muted-foreground"
                 }`}>
                   {isPaidBy ? (
                     <ArrowDown className="h-4 w-4 mr-1" />
