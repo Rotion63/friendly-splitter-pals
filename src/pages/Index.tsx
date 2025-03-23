@@ -1,23 +1,53 @@
 
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 import Layout from "@/components/Layout";
 import BillCard from "@/components/SplitBill/BillCard";
 import NewSplitButton from "@/components/SplitBill/NewSplitButton";
+import FriendsList from "@/components/SplitBill/FriendsList";
 import { sampleBills } from "@/lib/utils";
-import { Bill } from "@/lib/types";
+import { Bill, Participant } from "@/lib/types";
+import { getFriends, addFriend, removeFriend } from "@/lib/friendsStorage";
 
 const Index: React.FC = () => {
   const [bills, setBills] = useState<Bill[]>([]);
+  const [friends, setFriends] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate fetching data
+    // Load friends from storage
+    setFriends(getFriends());
+    
+    // Create one dummy bill or load real bills later
+    const dummyBill = {
+      ...sampleBills[0],
+      isDummy: true,
+      title: "Dinner with Friends (Example)"
+    };
+    
     setTimeout(() => {
-      setBills(sampleBills);
+      setBills([dummyBill]);
       setLoading(false);
     }, 800);
   }, []);
+
+  const handleDeleteBill = (id: string) => {
+    setBills(bills.filter(bill => bill.id !== id));
+    toast.success("Bill deleted successfully");
+  };
+
+  const handleAddFriend = (friend: Participant) => {
+    const updatedFriends = addFriend(friend);
+    setFriends(updatedFriends);
+    toast.success(`${friend.name} added to your friends`);
+  };
+
+  const handleRemoveFriend = (id: string) => {
+    const updatedFriends = removeFriend(id);
+    setFriends(updatedFriends);
+    toast.success("Friend removed");
+  };
 
   return (
     <Layout>
@@ -34,9 +64,15 @@ const Index: React.FC = () => {
           </p>
         </motion.div>
 
+        <FriendsList 
+          friends={friends}
+          onAddFriend={handleAddFriend}
+          onRemoveFriend={handleRemoveFriend}
+        />
+
         {loading ? (
           <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
+            {[1].map((i) => (
               <div 
                 key={i}
                 className="rounded-xl bg-muted/50 h-32 animate-pulse-soft"
@@ -52,6 +88,7 @@ const Index: React.FC = () => {
                   key={bill.id} 
                   bill={bill}
                   index={index}
+                  onDelete={handleDeleteBill}
                 />
               ))}
             </div>

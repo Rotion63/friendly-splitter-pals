@@ -21,6 +21,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/new-split" element={<NewSplit />} />
+          <Route path="/split/:id" element={<SplitDetails />} />
           <Route path="/split-details/:id" element={<SplitDetails />} />
           <Route path="/split-summary/:id" element={<SplitSummary />} />
           <Route path="*" element={<NotFound />} />

@@ -20,4 +20,5 @@ export interface Bill {
   participants: Participant[];
   items: BillItem[];
   paidBy?: string; // Participant ID
+  isDummy?: boolean; // Flag to identify dummy bills
 }
