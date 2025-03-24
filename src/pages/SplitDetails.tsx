@@ -24,6 +24,7 @@ const SplitDetails: React.FC = () => {
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [paidBy, setPaidBy] = useState<string>("");
   const [partialPayments, setPartialPayments] = useState<PartialPayment[]>([]);
+  const [usePartialPayment, setUsePartialPayment] = useState(false);
   const [discount, setDiscount] = useState<number>(0);
   
   useEffect(() => {
@@ -38,13 +39,26 @@ const SplitDetails: React.FC = () => {
     if (foundBill) {
       setBill(foundBill);
       setPaidBy(foundBill.paidBy || foundBill.participants[0]?.id || "");
-      setPartialPayments(foundBill.partialPayments || []);
+      
+      // Initialize partial payments state
+      if (foundBill.partialPayments && foundBill.partialPayments.length > 0) {
+        setPartialPayments(foundBill.partialPayments);
+        setUsePartialPayment(true);
+      }
+      
       setDiscount(foundBill.discount || 0);
     } else {
       toast.error("Bill not found");
       navigate("/");
     }
   }, [id, navigate]);
+  
+  useEffect(() => {
+    // When usePartialPayment changes, update partial payments accordingly
+    if (!usePartialPayment) {
+      setPartialPayments([]);
+    }
+  }, [usePartialPayment]);
   
   const handleAddItem = () => {
     if (!bill || !newItemName.trim() || !newItemAmount || newItemParticipants.length === 0) {
@@ -143,18 +157,27 @@ const SplitDetails: React.FC = () => {
     const totalPaid = partialPayments.reduce((sum, payment) => sum + payment.amount, 0);
     const remainingAmount = bill.totalAmount - totalPaid - discount;
     
-    let updatedBill = {
+    let updatedBill: Bill = {
       ...bill,
-      partialPayments,
       discount,
     };
     
-    // If there's remaining amount to be paid and we have a paidBy, include it
-    if (remainingAmount > 0 && paidBy) {
+    // Handle partial payments logic
+    if (usePartialPayment) {
+      updatedBill.partialPayments = partialPayments;
+      
+      // If there's remaining amount to be paid and we have a paidBy, include it
+      if (remainingAmount > 0 && paidBy) {
+        updatedBill.paidBy = paidBy;
+      } else {
+        // If everything is covered by partial payments, we don't need paidBy
+        delete updatedBill.paidBy;
+      }
+    } else {
+      // If not using partial payments, just set paidBy
       updatedBill.paidBy = paidBy;
-    } else if (partialPayments.length > 0) {
-      // If everything is covered by partial payments, we don't need paidBy
-      delete updatedBill.paidBy;
+      // Delete partialPayments if it exists
+      delete updatedBill.partialPayments;
     }
     
     saveBill(updatedBill);
@@ -177,7 +200,6 @@ const SplitDetails: React.FC = () => {
   // Calculate total after partial payments
   const totalPaid = partialPayments.reduce((sum, payment) => sum + payment.amount, 0);
   const remainingAmount = bill.totalAmount - totalPaid - discount;
-  const showPaidBy = remainingAmount > 0;
   
   return (
     <Layout showBackButton title={bill.title}>
@@ -217,16 +239,45 @@ const SplitDetails: React.FC = () => {
           onDiscountChange={handleDiscountChange}
         />
         
-        {/* Add the partial payment manager */}
-        <PartialPaymentManager 
-          participants={bill.participants}
-          partialPayments={partialPayments}
-          totalAmount={bill.totalAmount - discount}
-          onPartialPaymentsChange={handlePartialPaymentsChange}
-        />
+        {/* Payment Method Selection */}
+        <div className="glass-panel rounded-xl p-4 mb-6">
+          <h2 className="text-lg font-medium mb-3">Payment Method</h2>
+          <div className="flex space-x-2 mb-4">
+            <Button
+              variant={!usePartialPayment ? "default" : "outline"}
+              className="flex-1"
+              onClick={() => setUsePartialPayment(false)}
+            >
+              Single Payer
+            </Button>
+            <Button
+              variant={usePartialPayment ? "default" : "outline"}
+              className="flex-1"
+              onClick={() => setUsePartialPayment(true)}
+            >
+              Multiple Payers
+            </Button>
+          </div>
+        </div>
         
-        {/* Only show the PaidBy selector if there's remaining amount */}
-        {showPaidBy && (
+        {/* Conditional rendering based on payment method */}
+        {usePartialPayment ? (
+          <PartialPaymentManager 
+            participants={bill.participants}
+            partialPayments={partialPayments}
+            totalAmount={bill.totalAmount - discount}
+            onPartialPaymentsChange={handlePartialPaymentsChange}
+          />
+        ) : (
+          <PaidBySelector 
+            participants={bill.participants}
+            paidBy={paidBy}
+            onPaidByChange={setPaidBy}
+          />
+        )}
+        
+        {/* Show PaidBy for remaining amount only if there are partial payments */}
+        {usePartialPayment && remainingAmount > 0 && (
           <PaidBySelector 
             participants={bill.participants}
             paidBy={paidBy}
