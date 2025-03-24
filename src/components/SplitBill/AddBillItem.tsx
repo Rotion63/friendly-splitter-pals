@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Plus } from "lucide-react";
 import { Participant } from "@/lib/types";
@@ -20,6 +20,12 @@ interface AddBillItemProps {
   onSelectAll: () => void;
   onAdd: () => void;
   onCancel: () => void;
+  newItemRate: string;
+  newItemQuantity: string;
+  onNewItemRateChange: (value: string) => void;
+  onNewItemQuantityChange: (value: string) => void;
+  useRateQuantity: boolean;
+  onToggleRateQuantity: () => void;
 }
 
 const AddBillItem: React.FC<AddBillItemProps> = ({
@@ -34,7 +40,24 @@ const AddBillItem: React.FC<AddBillItemProps> = ({
   onSelectAll,
   onAdd,
   onCancel,
+  newItemRate,
+  newItemQuantity,
+  onNewItemRateChange,
+  onNewItemQuantityChange,
+  useRateQuantity,
+  onToggleRateQuantity,
 }) => {
+  // Effect to update amount when using rate * quantity
+  useEffect(() => {
+    if (useRateQuantity && newItemRate && newItemQuantity) {
+      const rate = parseFloat(newItemRate);
+      const quantity = parseFloat(newItemQuantity);
+      if (!isNaN(rate) && !isNaN(quantity)) {
+        onNewItemAmountChange((rate * quantity).toFixed(2));
+      }
+    }
+  }, [newItemRate, newItemQuantity, useRateQuantity, onNewItemAmountChange]);
+
   if (!isAdding) {
     return (
       <Button 
@@ -68,18 +91,70 @@ const AddBillItem: React.FC<AddBillItemProps> = ({
           />
         </div>
         
-        <div>
-          <Label htmlFor="itemAmount">Amount</Label>
-          <Input
-            id="itemAmount"
-            value={newItemAmount}
-            onChange={(e) => onNewItemAmountChange(e.target.value)}
-            placeholder="0.00"
-            type="number"
-            step="0.01"
-            min="0.01"
+        <div className="flex items-center space-x-2 my-2">
+          <Checkbox 
+            id="useRateQuantity" 
+            checked={useRateQuantity}
+            onCheckedChange={onToggleRateQuantity}
           />
+          <Label 
+            htmlFor="useRateQuantity" 
+            className="text-sm cursor-pointer"
+          >
+            Use Rate × Quantity
+          </Label>
         </div>
+        
+        {useRateQuantity ? (
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label htmlFor="itemRate">Rate</Label>
+              <Input
+                id="itemRate"
+                value={newItemRate}
+                onChange={(e) => onNewItemRateChange(e.target.value)}
+                placeholder="0.00"
+                type="number"
+                step="0.01"
+                min="0.01"
+              />
+            </div>
+            <div>
+              <Label htmlFor="itemQuantity">Quantity</Label>
+              <Input
+                id="itemQuantity"
+                value={newItemQuantity}
+                onChange={(e) => onNewItemQuantityChange(e.target.value)}
+                placeholder="1"
+                type="number"
+                step="1"
+                min="1"
+              />
+            </div>
+            <div className="col-span-2">
+              <Label htmlFor="itemAmount">Total Amount</Label>
+              <Input
+                id="itemAmount"
+                value={newItemAmount}
+                readOnly
+                className="bg-muted/20"
+              />
+            </div>
+          </div>
+        ) : (
+          <div>
+            <Label htmlFor="itemAmount">Amount</Label>
+            <Input
+              id="itemAmount"
+              value={newItemAmount}
+              onChange={(e) => onNewItemAmountChange(e.target.value)}
+              placeholder="0.00"
+              type="number"
+              step="0.01"
+              min="0.01"
+            />
+          </div>
+        )}
         
         <div>
           <div className="flex justify-between items-center mb-2">
@@ -122,7 +197,8 @@ const AddBillItem: React.FC<AddBillItemProps> = ({
       <div className="flex space-x-2">
         <Button
           onClick={onAdd}
-          disabled={!newItemName.trim() || !newItemAmount || newItemParticipants.length === 0}
+          disabled={!newItemName.trim() || !newItemAmount || newItemParticipants.length === 0 || 
+            (useRateQuantity && (!newItemRate || !newItemQuantity))}
           className="flex-1"
         >
           Add

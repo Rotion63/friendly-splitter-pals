@@ -26,6 +26,10 @@ const SplitDetails: React.FC = () => {
   const [partialPayments, setPartialPayments] = useState<PartialPayment[]>([]);
   const [usePartialPayment, setUsePartialPayment] = useState(false);
   const [discount, setDiscount] = useState<number>(0);
+  // New states for rate and quantity
+  const [newItemRate, setNewItemRate] = useState("");
+  const [newItemQuantity, setNewItemQuantity] = useState("1");
+  const [useRateQuantity, setUseRateQuantity] = useState(false);
   
   useEffect(() => {
     if (!id) {
@@ -70,12 +74,18 @@ const SplitDetails: React.FC = () => {
       return;
     }
     
-    const newItem: BillItem = {
+    let newItem: BillItem = {
       id: generateId("item-"),
       name: newItemName.trim(),
       amount,
       participants: newItemParticipants,
     };
+    
+    // Add rate and quantity if using those fields
+    if (useRateQuantity) {
+      newItem.rate = parseFloat(newItemRate);
+      newItem.quantity = parseFloat(newItemQuantity);
+    }
     
     const updatedBill = {
       ...bill,
@@ -89,6 +99,8 @@ const SplitDetails: React.FC = () => {
     setNewItemName("");
     setNewItemAmount("");
     setNewItemParticipants([]);
+    setNewItemRate("");
+    setNewItemQuantity("1");
     setIsAddingItem(false);
   };
   
@@ -147,6 +159,15 @@ const SplitDetails: React.FC = () => {
       };
       setBill(updatedBill);
       saveBill(updatedBill);
+    }
+  };
+  
+  const handleToggleRateQuantity = () => {
+    setUseRateQuantity(!useRateQuantity);
+    if (!useRateQuantity) {
+      // When enabling rate × quantity, initialize with sensible defaults
+      setNewItemRate(newItemAmount || "0");
+      setNewItemQuantity("1");
     }
   };
   
@@ -229,6 +250,12 @@ const SplitDetails: React.FC = () => {
             onSelectAll={handleSelectAll}
             onAdd={handleAddItem}
             onCancel={() => setIsAddingItem(!isAddingItem)}
+            newItemRate={newItemRate}
+            newItemQuantity={newItemQuantity}
+            onNewItemRateChange={setNewItemRate}
+            onNewItemQuantityChange={setNewItemQuantity}
+            useRateQuantity={useRateQuantity}
+            onToggleRateQuantity={handleToggleRateQuantity}
           />
         </div>
         

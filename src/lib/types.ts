@@ -10,11 +10,20 @@ export interface BillItem {
   name: string;
   amount: number;
   participants: string[]; // Participant IDs
+  rate?: number;
+  quantity?: number;
 }
 
 export interface PartialPayment {
   payerId: string;
   amount: number;
+}
+
+export interface Settlement {
+  payerId: string;
+  receiverId: string;
+  amount: number;
+  settled?: boolean;
 }
 
 export interface Bill {
@@ -27,5 +36,6 @@ export interface Bill {
   paidBy?: string; // Participant ID
   partialPayments?: PartialPayment[]; // For multiple people paying
   discount?: number; // Discount amount (not percentage)
+  settlements?: Settlement[]; // Track who has settled with whom
   isDummy?: boolean; // Flag to identify dummy bills
 }

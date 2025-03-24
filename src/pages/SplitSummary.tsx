@@ -4,17 +4,21 @@ import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
 import { calculateSplits, formatCurrency } from "@/lib/utils";
-import { Bill } from "@/lib/types";
+import { Bill, Settlement } from "@/lib/types";
 import { ArrowDown, ArrowUp, User, Receipt, Percent, Wallet, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
-import { getBillById } from "@/lib/billStorage";
+import { getBillById, saveBill } from "@/lib/billStorage";
+import SettlementManager from "@/components/SplitBill/SettlementManager";
+import IndividualConsumption from "@/components/SplitBill/IndividualConsumption";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const SplitSummary: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [bill, setBill] = useState<Bill | null>(null);
   const [splits, setSplits] = useState<Record<string, number>>({});
+  const [activeTab, setActiveTab] = useState("summary");
   
   useEffect(() => {
     if (!id) {
@@ -26,6 +30,53 @@ const SplitSummary: React.FC = () => {
     const foundBill = getBillById(id);
     
     if (foundBill) {
+      // Initialize settlements array if it doesn't exist
+      if (!foundBill.settlements) {
+        const calculatedSplits = calculateSplits(foundBill);
+        
+        // Create settlement objects based on the calculated splits
+        const newSettlements: Settlement[] = [];
+        
+        Object.entries(calculatedSplits).forEach(([participantId, amount]) => {
+          // If this person owes money (negative amount)
+          if (amount < 0) {
+            // Find who to pay to
+            let receiverId = "";
+            
+            // If single payer, payment goes to them
+            if (foundBill.paidBy) {
+              receiverId = foundBill.paidBy;
+            } 
+            // If partial payments, we need to determine who gets paid
+            else if (foundBill.partialPayments && foundBill.partialPayments.length > 0) {
+              // For simplicity, choose the person who paid the most
+              let maxPayer = {id: "", amount: 0};
+              
+              foundBill.partialPayments.forEach(payment => {
+                if (payment.amount > maxPayer.amount) {
+                  maxPayer = {id: payment.payerId, amount: payment.amount};
+                }
+              });
+              
+              receiverId = maxPayer.id;
+            }
+            
+            if (receiverId && receiverId !== participantId) {
+              newSettlements.push({
+                payerId: participantId,
+                receiverId: receiverId,
+                amount: Math.abs(amount),
+                settled: false
+              });
+            }
+          }
+        });
+        
+        // Save the bill with settlements
+        foundBill.settlements = newSettlements;
+        saveBill(foundBill);
+      }
+      
       setBill(foundBill);
       setSplits(calculateSplits(foundBill));
     } else {
@@ -44,6 +95,12 @@ const SplitSummary: React.FC = () => {
       title: "Coming soon",
       description: "Sharing functionality will be available in the next version.",
     });
+  };
+  
+  const handleBillUpdate = (updatedBill: Bill) => {
+    setBill(updatedBill);
+    // Recalculate splits if needed
+    setSplits(calculateSplits(updatedBill));
   };
   
   if (!bill) {
@@ -83,6 +140,152 @@ const SplitSummary: React.FC = () => {
       });
     }
   });
+  
+  // Render settlement status section
+  const renderSettlementDetails = () => {
+    return Object.entries(splits).map(([participantId, amount], index) => {
+      const participant = bill.participants.find(p => p.id === participantId);
+      if (!participant) return null;
+      
+      // Skip if the amount is negligible (very close to zero)
+      if (Math.abs(amount) < 0.01) {
+        return (
+          <motion.div
+            key={participantId}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ 
+              duration: 0.3,
+              delay: index * 0.1,
+            }}
+            className="flex items-center justify-between p-4 rounded-lg bg-white shadow-soft"
+          >
+            <div className="flex items-center">
+              <div className="h-10 w-10 rounded-full flex items-center justify-center mr-3 bg-muted/20 text-green-600">
+                {participant.avatar ? (
+                  <img 
+                    src={participant.avatar} 
+                    alt={participant.name}
+                    className="h-full w-full rounded-full object-cover"
+                  />
+                ) : (
+                  <CheckCircle2 className="h-5 w-5" />
+                )}
+              </div>
+              <div>
+                <div className="font-medium">{participant.name}</div>
+                <div className="text-xs text-green-600">Settled up</div>
+              </div>
+            </div>
+            
+            <div className="text-green-600">
+              <span>{formatCurrency(0)}</span>
+            </div>
+          </motion.div>
+        );
+      }
+      
+      const isReceivingMoney = amount > 0;
+      const isPayingMoney = amount < 0;
+      const formattedAmount = formatCurrency(Math.abs(amount));
+      
+      let targetPersonName = "";
+      if (hasPartialPayments) {
+        // In case of partial payments, simplify by showing owing to or receiving from the person who paid most
+        // Find the person who contributed the most
+        let maxContributor = paidByPerson?.id || "";
+        let maxAmount = 0;
+        
+        if (bill.partialPayments && bill.partialPayments.length > 0) {
+          bill.partialPayments.forEach(payment => {
+            if (payment.amount > maxAmount) {
+              maxAmount = payment.amount;
+              maxContributor = payment.payerId;
+            }
+          });
+        }
+        
+        const maxPerson = bill.participants.find(p => p.id === maxContributor);
+        targetPersonName = maxPerson?.name || "";
+      } else if (paidByPerson) {
+        targetPersonName = paidByPerson.name;
+      }
+      
+      // Check if this participant has all their payments settled
+      const allSettled = bill.settlements?.filter(
+        s => s.payerId === participantId && !s.settled
+      ).length === 0;
+      
+      return (
+        <motion.div
+          key={participantId}
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ 
+            duration: 0.3,
+            delay: index * 0.1,
+          }}
+          className={`flex items-center justify-between p-4 rounded-lg ${
+            isReceivingMoney
+              ? "bg-primary/10 border border-primary/20"
+              : allSettled && isPayingMoney
+                ? "bg-green-50 border border-green-100"
+                : "bg-white shadow-soft"
+          }`}
+        >
+          <div className="flex items-center">
+            <div className={`h-10 w-10 rounded-full flex items-center justify-center mr-3 ${
+              isReceivingMoney ? "bg-primary/20 text-primary" : 
+              allSettled ? "bg-green-100 text-green-600" : "bg-muted"
+            }`}>
+              {participant.avatar ? (
+                <img 
+                  src={participant.avatar} 
+                  alt={participant.name}
+                  className="h-full w-full rounded-full object-cover"
+                />
+              ) : (
+                allSettled && isPayingMoney ? <CheckCircle2 className="h-5 w-5" /> : <User className="h-5 w-5" />
+              )}
+            </div>
+            <div>
+              <div className="font-medium">{participant.name}</div>
+              {isReceivingMoney && (
+                <div className="text-xs text-primary">
+                  Receives money
+                  {targetPersonName && <span> from others</span>}
+                </div>
+              )}
+              {isPayingMoney && (
+                <div className={`text-xs ${allSettled ? "text-green-600" : "text-destructive"}`}>
+                  {allSettled ? "All payments settled" : 
+                    <>Owes money {targetPersonName && <span>to {targetPersonName}</span>}</>
+                  }
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <div className={`flex items-center ${
+            isReceivingMoney
+              ? "text-primary font-medium"
+              : isPayingMoney 
+                ? allSettled ? "text-green-600 font-medium" : "text-destructive font-medium"
+                : "text-muted-foreground"
+          }`}>
+            {isReceivingMoney ? (
+              <ArrowDown className="h-4 w-4 mr-1" />
+            ) : isPayingMoney ? (
+              <ArrowUp className="h-4 w-4 mr-1" />
+            ) : null}
+            <span>
+              {formattedAmount}
+            </span>
+          </div>
+        </motion.div>
+      );
+    });
+  };
   
   return (
     <Layout showBackButton title="Summary">
@@ -129,224 +332,82 @@ const SplitSummary: React.FC = () => {
           ) : null}
         </motion.div>
         
-        {/* Payment Contributions Section */}
-        {(hasPartialPayments || paidByPerson) && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.1 }}
-            className="mb-6"
-          >
-            <h3 className="text-lg font-medium mb-3">Payment Contributions</h3>
-            <div className="space-y-2 mb-4">
-              {hasPartialPayments && bill.partialPayments?.map((payment, index) => {
-                const payer = bill.participants.find(p => p.id === payment.payerId);
-                return (
-                  <div key={index} className="flex items-center justify-between bg-white p-3 rounded-lg shadow-soft">
-                    <span>{payer?.name || "Unknown"}</span>
-                    <span className="font-medium">{formatCurrency(payment.amount)}</span>
-                  </div>
-                );
-              })}
-              
-              {!hasPartialPayments && paidByPerson && (
-                <div className="flex items-center justify-between bg-white p-3 rounded-lg shadow-soft">
-                  <span>{paidByPerson.name}</span>
-                  <span className="font-medium">
-                    {formatCurrency(effectiveAmount)}
-                  </span>
-                </div>
-              )}
-              
-              {hasPartialPayments && bill.paidBy && (
-                <div className="flex items-center justify-between bg-white p-3 rounded-lg shadow-soft">
-                  <span>{paidByPerson?.name || "Unknown"}</span>
-                  <span className="font-medium">
-                    {formatCurrency(
-                      effectiveAmount - 
-                      (bill.partialPayments?.reduce((sum, p) => sum + p.amount, 0) || 0)
-                    )}
-                  </span>
-                </div>
-              )}
+        {/* Tabbed Interface for better organization */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="summary">Summary</TabsTrigger>
+            <TabsTrigger value="details">Details</TabsTrigger>
+            <TabsTrigger value="settlement">Settlement</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="summary" className="mt-6 space-y-4">
+            {/* Settlement Details Section */}
+            <h3 className="text-lg font-medium mb-3">Settlement Overview</h3>
+            <div className="space-y-3 mb-6">
+              {renderSettlementDetails()}
             </div>
-          </motion.div>
-        )}
-        
-        {/* Individual Consumption Section - What each person actually consumed */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
-          className="mb-6"
-        >
-          <h3 className="text-lg font-medium mb-3">Individual Consumption</h3>
-          <div className="space-y-2 mb-4">
-            {Object.entries(individualConsumption).map(([participantId, amount], index) => {
-              const participant = bill.participants.find(p => p.id === participantId);
-              if (!participant || amount === 0) return null;
-              
-              return (
-                <div key={participantId} className="flex items-center justify-between bg-white p-3 rounded-lg shadow-soft">
-                  <div className="flex items-center">
-                    <div className="h-8 w-8 rounded-full flex items-center justify-center mr-3 bg-muted">
-                      {participant.avatar ? (
-                        <img 
-                          src={participant.avatar} 
-                          alt={participant.name}
-                          className="h-full w-full rounded-full object-cover"
-                        />
-                      ) : (
-                        <User className="h-4 w-4" />
-                      )}
-                    </div>
-                    <span>{participant.name}</span>
-                  </div>
-                  <span className="font-medium">{formatCurrency(amount)}</span>
-                </div>
-              );
-            })}
-          </div>
-        </motion.div>
-        
-        {/* Who Owes What Section */}
-        <h3 className="text-lg font-medium mb-3">Settlement Details</h3>
-        
-        <div className="space-y-3 mb-6">
-          {Object.entries(splits).map(([participantId, amount], index) => {
-            const participant = bill.participants.find(p => p.id === participantId);
-            if (!participant) return null;
-            
-            // Skip if the amount is negligible (very close to zero)
-            if (Math.abs(amount) < 0.01) {
-              return (
-                <motion.div
-                  key={participantId}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ 
-                    duration: 0.3,
-                    delay: index * 0.1,
-                  }}
-                  className="flex items-center justify-between p-4 rounded-lg bg-white shadow-soft"
-                >
-                  <div className="flex items-center">
-                    <div className="h-10 w-10 rounded-full flex items-center justify-center mr-3 bg-muted/20 text-green-600">
-                      {participant.avatar ? (
-                        <img 
-                          src={participant.avatar} 
-                          alt={participant.name}
-                          className="h-full w-full rounded-full object-cover"
-                        />
-                      ) : (
-                        <CheckCircle2 className="h-5 w-5" />
-                      )}
-                    </div>
-                    <div>
-                      <div className="font-medium">{participant.name}</div>
-                      <div className="text-xs text-green-600">Settled up</div>
-                    </div>
-                  </div>
-                  
-                  <div className="text-green-600">
-                    <span>{formatCurrency(0)}</span>
-                  </div>
-                </motion.div>
-              );
-            }
-            
-            const isReceivingMoney = amount > 0;
-            const isPayingMoney = amount < 0;
-            const formattedAmount = formatCurrency(Math.abs(amount));
-            
-            let targetPersonName = "";
-            if (hasPartialPayments) {
-              // In case of partial payments, simplify by showing owing to or receiving from the person who paid most
-              // Find the person who contributed the most
-              let maxContributor = paidByPerson?.id || "";
-              let maxAmount = 0;
-              
-              if (bill.partialPayments && bill.partialPayments.length > 0) {
-                bill.partialPayments.forEach(payment => {
-                  if (payment.amount > maxAmount) {
-                    maxAmount = payment.amount;
-                    maxContributor = payment.payerId;
-                  }
-                });
-              }
-              
-              const maxPerson = bill.participants.find(p => p.id === maxContributor);
-              targetPersonName = maxPerson?.name || "";
-            } else if (paidByPerson) {
-              targetPersonName = paidByPerson.name;
-            }
-            
-            return (
+          </TabsContent>
+          
+          <TabsContent value="details" className="mt-6 space-y-4">
+            {/* Payment Contributions Section */}
+            {(hasPartialPayments || paidByPerson) && (
               <motion.div
-                key={participantId}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ 
-                  duration: 0.3,
-                  delay: index * 0.1,
-                }}
-                className={`flex items-center justify-between p-4 rounded-lg ${
-                  isReceivingMoney
-                    ? "bg-primary/10 border border-primary/20"
-                    : "bg-white shadow-soft"
-                }`}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.1 }}
+                className="mb-6"
               >
-                <div className="flex items-center">
-                  <div className={`h-10 w-10 rounded-full flex items-center justify-center mr-3 ${
-                    isReceivingMoney ? "bg-primary/20 text-primary" : "bg-muted"
-                  }`}>
-                    {participant.avatar ? (
-                      <img 
-                        src={participant.avatar} 
-                        alt={participant.name}
-                        className="h-full w-full rounded-full object-cover"
-                      />
-                    ) : (
-                      <User className="h-5 w-5" />
-                    )}
-                  </div>
-                  <div>
-                    <div className="font-medium">{participant.name}</div>
-                    {isReceivingMoney && (
-                      <div className="text-xs text-primary">
-                        Receives money
-                        {targetPersonName && <span> from others</span>}
+                <h3 className="text-lg font-medium mb-3">Payment Contributions</h3>
+                <div className="space-y-2 mb-4">
+                  {hasPartialPayments && bill.partialPayments?.map((payment, index) => {
+                    const payer = bill.participants.find(p => p.id === payment.payerId);
+                    return (
+                      <div key={index} className="flex items-center justify-between bg-white p-3 rounded-lg shadow-soft">
+                        <span>{payer?.name || "Unknown"}</span>
+                        <span className="font-medium">{formatCurrency(payment.amount)}</span>
                       </div>
-                    )}
-                    {isPayingMoney && (
-                      <div className="text-xs text-destructive">
-                        Owes money
-                        {targetPersonName && <span> to {targetPersonName}</span>}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                <div className={`flex items-center ${
-                  isReceivingMoney
-                    ? "text-primary font-medium"
-                    : isPayingMoney 
-                      ? "text-destructive font-medium"
-                      : "text-muted-foreground"
-                }`}>
-                  {isReceivingMoney ? (
-                    <ArrowDown className="h-4 w-4 mr-1" />
-                  ) : isPayingMoney ? (
-                    <ArrowUp className="h-4 w-4 mr-1" />
-                  ) : null}
-                  <span>
-                    {formattedAmount}
-                  </span>
+                    );
+                  })}
+                  
+                  {!hasPartialPayments && paidByPerson && (
+                    <div className="flex items-center justify-between bg-white p-3 rounded-lg shadow-soft">
+                      <span>{paidByPerson.name}</span>
+                      <span className="font-medium">
+                        {formatCurrency(effectiveAmount)}
+                      </span>
+                    </div>
+                  )}
+                  
+                  {hasPartialPayments && bill.paidBy && (
+                    <div className="flex items-center justify-between bg-white p-3 rounded-lg shadow-soft">
+                      <span>{paidByPerson?.name || "Unknown"}</span>
+                      <span className="font-medium">
+                        {formatCurrency(
+                          effectiveAmount - 
+                          (bill.partialPayments?.reduce((sum, p) => sum + p.amount, 0) || 0)
+                        )}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </motion.div>
-            );
-          })}
-        </div>
+            )}
+            
+            {/* Individual Consumption Section */}
+            <IndividualConsumption 
+              bill={bill}
+              individualConsumption={individualConsumption}
+            />
+          </TabsContent>
+          
+          <TabsContent value="settlement" className="mt-6">
+            {/* Settlement Manager Section */}
+            <SettlementManager 
+              bill={bill}
+              onBillUpdated={handleBillUpdate}
+            />
+          </TabsContent>
+        </Tabs>
         
         <Button 
           className="w-full"

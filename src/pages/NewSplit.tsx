@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import Layout from "@/components/Layout";
 import AddParticipant from "@/components/SplitBill/AddParticipant";
@@ -76,6 +76,13 @@ const NewSplit: React.FC = () => {
   // Function to determine if we should show friend addition guidance
   const showFriendGuidance = participants.length < 2 && friends.length === 0;
   
+  // Fix bug by stopping event propagation
+  const toggleShowFriends = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowAddFriends(!showAddFriends);
+  };
+  
   return (
     <Layout showBackButton title="New Split">
       <div className="py-6">
@@ -120,7 +127,8 @@ const NewSplit: React.FC = () => {
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  onClick={() => setShowAddFriends(!showAddFriends)}
+                  onClick={toggleShowFriends}
+                  type="button"
                 >
                   {showAddFriends ? 'Hide' : 'Show'}
                 </Button>
@@ -141,6 +149,7 @@ const NewSplit: React.FC = () => {
                       className="flex items-center gap-2"
                       onClick={() => addFriendAsParticipant(friend)}
                       disabled={participants.some(p => p.id === friend.id)}
+                      type="button"
                     >
                       <span>{friend.name}</span>
                       <UserPlus className="h-3.5 w-3.5" />

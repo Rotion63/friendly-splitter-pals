@@ -30,6 +30,11 @@ const BillItemList: React.FC<BillItemListProps> = ({ items, onRemoveItem }) => {
                   <span className="font-medium">{item.name}</span>
                   <span>{formatCurrency(item.amount)}</span>
                 </div>
+                {item.rate && item.quantity && (
+                  <div className="text-xs text-muted-foreground mb-1">
+                    {formatCurrency(item.rate)} × {item.quantity}
+                  </div>
+                )}
                 <div className="text-xs text-muted-foreground">
                   Split among {item.participants.length} people
                 </div>
