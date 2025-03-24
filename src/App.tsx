@@ -9,6 +9,7 @@ import NewSplit from "./pages/NewSplit";
 import SplitDetails from "./pages/SplitDetails";
 import SplitSummary from "./pages/SplitSummary";
 import NotFound from "./pages/NotFound";
+import PlacesAndGroups from "./pages/PlacesAndGroups";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/split/:id" element={<SplitDetails />} />
           <Route path="/split-details/:id" element={<SplitDetails />} />
           <Route path="/split-summary/:id" element={<SplitSummary />} />
+          <Route path="/places-and-groups" element={<PlacesAndGroups />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

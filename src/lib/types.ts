@@ -39,3 +39,21 @@ export interface Bill {
   settlements?: Settlement[]; // Track who has settled with whom
   isDummy?: boolean; // Flag to identify dummy bills
 }
+
+export interface MenuItem {
+  id: string;
+  name: string;
+  price: number;
+}
+
+export interface Place {
+  id: string;
+  name: string;
+  menu: MenuItem[];
+}
+
+export interface FriendGroup {
+  id: string;
+  name: string;
+  members: Participant[];
+}
