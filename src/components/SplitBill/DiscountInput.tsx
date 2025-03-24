@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { Receipt, ReceiptPercent } from "lucide-react";
+import { Receipt, Percent } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/lib/utils";
 
@@ -93,7 +93,7 @@ const DiscountInput: React.FC<DiscountInputProps> = ({
           title={`Switch to ${discountType === "amount" ? "percentage" : "amount"}`}
         >
           {discountType === "amount" ? 
-            <ReceiptPercent className="h-5 w-5" /> : 
+            <Percent className="h-5 w-5" /> : 
             <Receipt className="h-5 w-5" />
           }
         </button>

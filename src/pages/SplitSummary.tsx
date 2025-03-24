@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import Layout from "@/components/Layout";
 import { calculateSplits, formatCurrency } from "@/lib/utils";
 import { Bill } from "@/lib/types";
-import { ArrowDown, ArrowUp, User, ReceiptPercent, Wallet } from "lucide-react";
+import { ArrowDown, ArrowUp, User, Receipt, Percent, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { getBillById } from "@/lib/billStorage";
@@ -84,7 +84,7 @@ const SplitSummary: React.FC = () => {
           
           {hasDiscount && (
             <div className="flex items-center justify-center gap-1 text-green-600 mb-2">
-              <ReceiptPercent className="h-4 w-4" />
+              <Percent className="h-4 w-4" />
               <span className="text-sm">
                 Discount: {formatCurrency(bill.discount || 0)}
               </span>
