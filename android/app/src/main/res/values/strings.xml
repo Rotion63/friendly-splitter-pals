@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">कति भो बिल ?</string>
+    <string name="title_activity_main">कति भो बिल ?</string>
+    <string name="package_name">com.github.rotion63.friendlysplitter</string>
+    <string name="custom_url_scheme">com.github.rotion63.friendlysplitter</string>
+</resources>
