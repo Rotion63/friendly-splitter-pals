@@ -15,7 +15,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { Currency, currencies, getActiveCurrency, setActiveCurrency } from "@/lib/utils";
+import { currencies, getActiveCurrency, setActiveCurrency } from "@/lib/utils";
+import { Currency } from "@/lib/types";
 
 export function CurrencySelector() {
   const [open, setOpen] = useState(false);

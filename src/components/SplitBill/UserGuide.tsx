@@ -5,10 +5,10 @@ import { X, Users, ReceiptText, Plus, Calculator, DollarSign, ChevronsRight } fr
 import { Button } from "@/components/ui/button";
 
 interface UserGuideProps {
-  onDismiss: () => void;
+  onDismiss?: () => void;
 }
 
-const UserGuide: React.FC<UserGuideProps> = ({ onDismiss }) => {
+const UserGuide: React.FC<UserGuideProps> = ({ onDismiss = () => {} }) => {
   const [currentStep, setCurrentStep] = useState(0);
   
   const steps = [

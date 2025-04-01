@@ -8,12 +8,14 @@ export const getFriends = (): Participant[] => {
   return storedFriends ? JSON.parse(storedFriends) : [];
 };
 
-export const addFriend = (friend: Participant): Participant[] => {
+export const saveFriend = (friend: Participant): Participant[] => {
   const friends = getFriends();
   const updatedFriends = [...friends, friend];
   localStorage.setItem(FRIENDS_STORAGE_KEY, JSON.stringify(updatedFriends));
   return updatedFriends;
 };
+
+export const addFriend = saveFriend; // For backward compatibility
 
 export const removeFriend = (id: string): Participant[] => {
   const friends = getFriends();

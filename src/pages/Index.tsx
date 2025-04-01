@@ -21,6 +21,7 @@ const HomePage: React.FC = () => {
   const [activeBills, setActiveBills] = useState<Bill[]>([]);
   const [settledBills, setSettledBills] = useState<Bill[]>([]);
   const [activeTab, setActiveTab] = useState("active");
+  const [showGuide, setShowGuide] = useState(true);
 
   useEffect(() => {
     // Load bills
@@ -65,6 +66,10 @@ const HomePage: React.FC = () => {
 
   const handleEditBill = (billId: string) => {
     navigate(`/split-details/${billId}`);
+  };
+
+  const handleCloseGuide = () => {
+    setShowGuide(false);
   };
 
   return (
@@ -119,7 +124,7 @@ const HomePage: React.FC = () => {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                 >
-                  <UserGuide />
+                  {showGuide && <UserGuide onDismiss={handleCloseGuide} />}
                 </motion.div>
               ) : (
                 <motion.div
@@ -128,12 +133,13 @@ const HomePage: React.FC = () => {
                   exit={{ opacity: 0 }}
                   className="space-y-4"
                 >
-                  {activeBills.map(bill => (
+                  {activeBills.map((bill, index) => (
                     <BillCard
                       key={bill.id}
                       bill={bill}
-                      onClick={() => handleViewBill(bill.id)}
-                      onEdit={() => handleEditBill(bill.id)}
+                      index={index}
+                      onClick={handleViewBill}
+                      onEdit={handleEditBill}
                     />
                   ))}
                 </motion.div>
@@ -159,13 +165,14 @@ const HomePage: React.FC = () => {
                   exit={{ opacity: 0 }}
                   className="space-y-4"
                 >
-                  {settledBills.map(bill => (
+                  {settledBills.map((bill, index) => (
                     <BillCard
                       key={bill.id}
                       bill={bill}
-                      onClick={() => handleViewBill(bill.id)}
-                      onEdit={() => handleEditBill(bill.id)}
-                      settled
+                      index={index}
+                      onClick={handleViewBill}
+                      onEdit={handleEditBill}
+                      settled={true}
                     />
                   ))}
                 </motion.div>

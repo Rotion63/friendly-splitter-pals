@@ -10,15 +10,40 @@ import { Button } from "@/components/ui/button";
 interface BillCardProps {
   bill: Bill;
   index: number;
+  onClick?: (id: string) => void;
+  onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
+  settled?: boolean;
 }
 
-const BillCard: React.FC<BillCardProps> = ({ bill, index, onDelete }) => {
+const BillCard: React.FC<BillCardProps> = ({ 
+  bill, 
+  index, 
+  onClick, 
+  onEdit, 
+  onDelete,
+  settled = false
+}) => {
   const handleDelete = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (onDelete) {
       onDelete(bill.id);
+    }
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (onClick) {
+      onClick(bill.id);
+    }
+  };
+  
+  const handleEdit = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onEdit) {
+      onEdit(bill.id);
     }
   };
 
@@ -32,11 +57,11 @@ const BillCard: React.FC<BillCardProps> = ({ bill, index, onDelete }) => {
         ease: [0.22, 1, 0.36, 1]
       }}
     >
-      <Link 
-        to={`/split/${bill.id}`}
-        className="block w-full"
+      <div 
+        onClick={handleClick}
+        className="block w-full cursor-pointer"
       >
-        <div className={`glass-panel rounded-xl overflow-hidden card-lift p-4 mb-4 ${bill.isDummy ? 'bg-muted/70' : ''}`}>
+        <div className={`glass-panel rounded-xl overflow-hidden card-lift p-4 mb-4 ${bill.isDummy ? 'bg-muted/70' : ''} ${settled ? 'opacity-70' : ''}`}>
           <div className="flex justify-between items-start mb-3">
             <h3 className={`font-medium text-lg ${bill.isDummy ? 'text-muted-foreground' : ''}`}>
               {bill.title}
@@ -54,6 +79,16 @@ const BillCard: React.FC<BillCardProps> = ({ bill, index, onDelete }) => {
                   onClick={handleDelete}
                 >
                   <X className="h-4 w-4" />
+                </Button>
+              )}
+              {onEdit && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 rounded-full hover:bg-primary/10 hover:text-primary"
+                  onClick={handleEdit}
+                >
+                  <User className="h-4 w-4" />
                 </Button>
               )}
             </div>
@@ -96,7 +131,7 @@ const BillCard: React.FC<BillCardProps> = ({ bill, index, onDelete }) => {
             </div>
           </div>
         </div>
-      </Link>
+      </div>
     </motion.div>
   );
 };
