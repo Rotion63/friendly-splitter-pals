@@ -1,10 +1,10 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, CheckCircle, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Bill, Participant, Settlement } from "@/lib/types";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, calculateOptimizedSettlements } from "@/lib/utils";
 import { saveBill } from "@/lib/billStorage";
 import { toast } from "sonner";
 
@@ -15,6 +15,21 @@ interface SettlementManagerProps {
 
 const SettlementManager: React.FC<SettlementManagerProps> = ({ bill, onBillUpdated }) => {
   const [showAllSettlements, setShowAllSettlements] = useState(false);
+  
+  // Use the new optimized settlements calculation
+  useEffect(() => {
+    if (!bill.settlements || bill.settlements.length === 0) {
+      const optimizedSettlements = calculateOptimizedSettlements(bill);
+      if (optimizedSettlements.length > 0) {
+        const updatedBill = {
+          ...bill,
+          settlements: optimizedSettlements
+        };
+        saveBill(updatedBill);
+        onBillUpdated(updatedBill);
+      }
+    }
+  }, [bill, onBillUpdated]);
   
   // Initialize settlements array if it doesn't exist
   if (!bill.settlements) {

@@ -26,6 +26,12 @@ export interface Settlement {
   settled?: boolean;
 }
 
+export interface Currency {
+  code: string;
+  symbol: string;
+  name: string;
+}
+
 export interface Bill {
   id: string;
   title: string;

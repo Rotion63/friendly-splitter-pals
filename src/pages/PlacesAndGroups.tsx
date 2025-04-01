@@ -1,36 +1,32 @@
 
-import React from "react";
-import Layout from "@/components/Layout";
+import React, { useState } from "react";
+import { AppLayout } from "@/components/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import GroupManager from "@/components/SplitBill/GroupManager";
 import PlaceManager from "@/components/SplitBill/PlaceManager";
+import GroupManager from "@/components/SplitBill/GroupManager";
 
 const PlacesAndGroups: React.FC = () => {
+  const [activeTab, setActiveTab] = useState("places");
+
   return (
-    <Layout showBackButton title="Places & Groups">
+    <AppLayout showBackButton title="Places & Groups">
       <div className="py-6">
-        <Tabs defaultValue="places" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="places">Places & Menus</TabsTrigger>
-            <TabsTrigger value="groups">Friend Groups</TabsTrigger>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="places">Places</TabsTrigger>
+            <TabsTrigger value="groups">Groups</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="places" className="space-y-6">
-            <p className="text-muted-foreground text-sm">
-              Manage your frequently visited places and their menu items for quick bill creation.
-            </p>
+          <TabsContent value="places" className="pt-6">
             <PlaceManager />
           </TabsContent>
           
-          <TabsContent value="groups" className="space-y-6">
-            <p className="text-muted-foreground text-sm">
-              Create and manage groups of friends for easier bill splitting.
-            </p>
+          <TabsContent value="groups" className="pt-6">
             <GroupManager />
           </TabsContent>
         </Tabs>
       </div>
-    </Layout>
+    </AppLayout>
   );
 };
 

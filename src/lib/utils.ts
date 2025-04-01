@@ -1,24 +1,55 @@
-
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { Bill, Participant, PartialPayment } from "./types";
+import { Bill, Participant, PartialPayment, Currency } from "./types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// Default currency is Nepali Rupees
+let activeCurrency: Currency = {
+  code: 'NPR',
+  symbol: 'Rs.',
+  name: 'Nepali Rupee'
+};
+
+export const currencies: Currency[] = [
+  { code: 'NPR', symbol: 'Rs.', name: 'Nepali Rupee' },
+  { code: 'USD', symbol: '$', name: 'US Dollar' },
+  { code: 'EUR', symbol: '€', name: 'Euro' },
+  { code: 'GBP', symbol: '£', name: 'British Pound' },
+  { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
+];
+
+export function setActiveCurrency(currency: Currency) {
+  activeCurrency = currency;
+  // Store in localStorage for persistence
+  localStorage.setItem('active-currency', JSON.stringify(currency));
+}
+
+export function getActiveCurrency(): Currency {
+  // Try to load from localStorage
+  const savedCurrency = localStorage.getItem('active-currency');
+  if (savedCurrency) {
+    try {
+      activeCurrency = JSON.parse(savedCurrency);
+    } catch (e) {
+      console.error('Failed to parse saved currency', e);
+    }
+  }
+  return activeCurrency;
+}
+
 export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2
-  }).format(amount);
+  const currency = getActiveCurrency();
+  return `${currency.symbol} ${amount.toFixed(2)}`;
 }
 
 export function generateId(prefix: string = ''): string {
   return `${prefix}${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
+// Now we'll update the settlement calculation algorithm
 export function calculateSplits(bill: Bill): Record<string, number> {
   const result: Record<string, number> = {};
   
@@ -57,6 +88,63 @@ export function calculateSplits(bill: Bill): Record<string, number> {
   }
   
   return result;
+}
+
+// This new function will calculate optimized settlements
+export function calculateOptimizedSettlements(bill: Bill) {
+  const splits = calculateSplits(bill);
+  const settlements = [];
+  
+  // Find main collector (person who paid the most)
+  let mainCollector = '';
+  let maxPaid = 0;
+  
+  if (bill.partialPayments && bill.partialPayments.length > 0) {
+    bill.partialPayments.forEach(payment => {
+      if (payment.amount > maxPaid) {
+        maxPaid = payment.amount;
+        mainCollector = payment.payerId;
+      }
+    });
+  } else if (bill.paidBy) {
+    mainCollector = bill.paidBy;
+  }
+  
+  if (!mainCollector) return [];
+  
+  // First phase: Everyone who owes money pays to the main collector
+  for (const [participantId, amount] of Object.entries(splits)) {
+    // Skip the main collector
+    if (participantId === mainCollector) continue;
+    
+    // If this person owes money (negative amount)
+    if (amount < 0 && participantId !== mainCollector) {
+      settlements.push({
+        payerId: participantId,
+        receiverId: mainCollector,
+        amount: Math.abs(amount),
+        settled: false
+      });
+    }
+  }
+  
+  // Second phase: Main collector pays to others who are owed money
+  for (const [participantId, amount] of Object.entries(splits)) {
+    // Skip the main collector
+    if (participantId === mainCollector) continue;
+    
+    // If this person should receive money (positive amount)
+    if (amount > 0 && participantId !== mainCollector) {
+      settlements.push({
+        payerId: mainCollector,
+        receiverId: participantId,
+        amount: amount,
+        settled: false
+      });
+    }
+  }
+  
+  return settlements;
 }
 
 // Sample data for demonstration

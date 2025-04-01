@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import Layout from "@/components/Layout";
+import { AppLayout } from "@/components/AppLayout";
 import { calculateSplits, formatCurrency } from "@/lib/utils";
 import { Bill, Settlement } from "@/lib/types";
 import { ArrowDown, ArrowUp, User, Receipt, Percent, Wallet, CheckCircle2 } from "lucide-react";
@@ -30,53 +29,6 @@ const SplitSummary: React.FC = () => {
     const foundBill = getBillById(id);
     
     if (foundBill) {
-      // Initialize settlements array if it doesn't exist
-      if (!foundBill.settlements) {
-        const calculatedSplits = calculateSplits(foundBill);
-        
-        // Create settlement objects based on the calculated splits
-        const newSettlements: Settlement[] = [];
-        
-        Object.entries(calculatedSplits).forEach(([participantId, amount]) => {
-          // If this person owes money (negative amount)
-          if (amount < 0) {
-            // Find who to pay to
-            let receiverId = "";
-            
-            // If single payer, payment goes to them
-            if (foundBill.paidBy) {
-              receiverId = foundBill.paidBy;
-            } 
-            // If partial payments, we need to determine who gets paid
-            else if (foundBill.partialPayments && foundBill.partialPayments.length > 0) {
-              // For simplicity, choose the person who paid the most
-              let maxPayer = {id: "", amount: 0};
-              
-              foundBill.partialPayments.forEach(payment => {
-                if (payment.amount > maxPayer.amount) {
-                  maxPayer = {id: payment.payerId, amount: payment.amount};
-                }
-              });
-              
-              receiverId = maxPayer.id;
-            }
-            
-            if (receiverId && receiverId !== participantId) {
-              newSettlements.push({
-                payerId: participantId,
-                receiverId: receiverId,
-                amount: Math.abs(amount),
-                settled: false
-              });
-            }
-          }
-        });
-        
-        // Save the bill with settlements
-        foundBill.settlements = newSettlements;
-        saveBill(foundBill);
-      }
-      
       setBill(foundBill);
       setSplits(calculateSplits(foundBill));
     } else {
@@ -105,14 +57,14 @@ const SplitSummary: React.FC = () => {
   
   if (!bill) {
     return (
-      <Layout showBackButton title="Loading...">
+      <AppLayout showBackButton title="Loading...">
         <div className="flex items-center justify-center h-full py-12">
           <div className="animate-pulse-soft text-center">
             <div className="h-8 w-32 bg-muted/50 rounded mb-4 mx-auto" />
             <div className="h-32 w-full bg-muted/50 rounded" />
           </div>
         </div>
-      </Layout>
+      </AppLayout>
     );
   }
   
@@ -288,7 +240,7 @@ const SplitSummary: React.FC = () => {
   };
   
   return (
-    <Layout showBackButton title="Summary">
+    <AppLayout showBackButton title="Summary">
       <div className="py-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -349,6 +301,12 @@ const SplitSummary: React.FC = () => {
           </TabsContent>
           
           <TabsContent value="details" className="mt-6 space-y-4">
+            {/* Individual Consumption Section - Show this first */}
+            <IndividualConsumption 
+              bill={bill}
+              individualConsumption={individualConsumption}
+            />
+            
             {/* Payment Contributions Section */}
             {(hasPartialPayments || paidByPerson) && (
               <motion.div
@@ -392,12 +350,6 @@ const SplitSummary: React.FC = () => {
                 </div>
               </motion.div>
             )}
-            
-            {/* Individual Consumption Section */}
-            <IndividualConsumption 
-              bill={bill}
-              individualConsumption={individualConsumption}
-            />
           </TabsContent>
           
           <TabsContent value="settlement" className="mt-6">
@@ -416,7 +368,7 @@ const SplitSummary: React.FC = () => {
           Share Results
         </Button>
       </div>
-    </Layout>
+    </AppLayout>
   );
 };
 

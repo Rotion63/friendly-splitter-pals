@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import Layout from "@/components/Layout";
+import { AppLayout } from "@/components/AppLayout";
 import AddParticipant from "@/components/SplitBill/AddParticipant";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -33,13 +33,11 @@ const NewSplit: React.FC = () => {
   const [showAddGroup, setShowAddGroup] = useState(false);
   
   useEffect(() => {
-    // Load friends and groups from storage
     const friendsList = getFriends();
     const groupsList = getGroups();
     setFriends(friendsList);
     setGroups(groupsList);
     
-    // Auto-add the first friend (yourself) if available
     if (friendsList.length > 0) {
       setParticipants([friendsList[0]]);
     }
@@ -54,7 +52,6 @@ const NewSplit: React.FC = () => {
   };
 
   const addFriendAsParticipant = (friend: Participant) => {
-    // Check if friend is already a participant
     if (!participants.some(p => p.id === friend.id)) {
       setParticipants([...participants, friend]);
       toast.success(`${friend.name} added to this split`);
@@ -64,7 +61,6 @@ const NewSplit: React.FC = () => {
   };
 
   const handleSelectGroup = (group: FriendGroup) => {
-    // Add group members who aren't already participants
     const newParticipants = [...participants];
     let addedCount = 0;
     
@@ -99,25 +95,20 @@ const NewSplit: React.FC = () => {
     
     const newBill = createEmptyBill(title, participants);
     
-    // Save bill to storage
     saveBill(newBill);
     console.log("New bill created:", newBill);
     
-    // Navigate to bill details page
     navigate(`/split-details/${newBill.id}`);
   };
   
-  // Function to determine if we should show friend addition guidance
   const showFriendGuidance = participants.length < 2 && friends.length === 0;
   
-  // Fix bug by stopping event propagation
   const toggleShowFriends = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setShowAddFriends(!showAddFriends);
   };
   
-  // Toggle show groups
   const toggleShowGroups = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -125,7 +116,7 @@ const NewSplit: React.FC = () => {
   };
   
   return (
-    <Layout showBackButton title="New Split">
+    <AppLayout showBackButton title="New Split">
       <div className="py-6">
         <motion.form
           initial={{ opacity: 0 }}
@@ -162,7 +153,6 @@ const NewSplit: React.FC = () => {
           />
           
           <div className="space-y-4">
-            {/* Add from friends or groups */}
             <div className="flex justify-between items-center">
               <span className="text-sm font-medium text-muted-foreground">Add from saved contacts</span>
               
@@ -182,7 +172,6 @@ const NewSplit: React.FC = () => {
                       <TabsTrigger value="groups">Groups</TabsTrigger>
                     </TabsList>
                     <TabsContent value="friends" className="pt-4">
-                      {/* Existing Friends List component can go here */}
                       <p className="text-sm text-muted-foreground mb-4">
                         Go to Home page to manage friends
                       </p>
@@ -195,7 +184,6 @@ const NewSplit: React.FC = () => {
               </Dialog>
             </div>
             
-            {/* Friends and Groups Toggle Buttons */}
             <div className="flex space-x-2">
               <Button 
                 variant="outline" 
@@ -218,7 +206,6 @@ const NewSplit: React.FC = () => {
               </Button>
             </div>
             
-            {/* Friends List */}
             {showAddFriends && friends.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
@@ -243,7 +230,6 @@ const NewSplit: React.FC = () => {
               </motion.div>
             )}
             
-            {/* Groups List */}
             {showAddGroup && groups.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
@@ -282,7 +268,7 @@ const NewSplit: React.FC = () => {
           </Button>
         </motion.form>
       </div>
-    </Layout>
+    </AppLayout>
   );
 };
 

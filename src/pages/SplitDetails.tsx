@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import Layout from "@/components/Layout";
+import { AppLayout } from "@/components/AppLayout";
 import { Bill, BillItem, PartialPayment } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { generateId } from "@/lib/utils";
@@ -26,7 +25,6 @@ const SplitDetails: React.FC = () => {
   const [partialPayments, setPartialPayments] = useState<PartialPayment[]>([]);
   const [usePartialPayment, setUsePartialPayment] = useState(false);
   const [discount, setDiscount] = useState<number>(0);
-  // New states for rate and quantity
   const [newItemRate, setNewItemRate] = useState("");
   const [newItemQuantity, setNewItemQuantity] = useState("1");
   const [useRateQuantity, setUseRateQuantity] = useState(false);
@@ -37,14 +35,12 @@ const SplitDetails: React.FC = () => {
       return;
     }
     
-    // Get bill from storage
     const foundBill = getBillById(id);
     
     if (foundBill) {
       setBill(foundBill);
       setPaidBy(foundBill.paidBy || foundBill.participants[0]?.id || "");
       
-      // Initialize partial payments state
       if (foundBill.partialPayments && foundBill.partialPayments.length > 0) {
         setPartialPayments(foundBill.partialPayments);
         setUsePartialPayment(true);
@@ -58,7 +54,6 @@ const SplitDetails: React.FC = () => {
   }, [id, navigate]);
   
   useEffect(() => {
-    // When usePartialPayment changes, update partial payments accordingly
     if (!usePartialPayment) {
       setPartialPayments([]);
     }
@@ -81,7 +76,6 @@ const SplitDetails: React.FC = () => {
       participants: newItemParticipants,
     };
     
-    // Add rate and quantity if using those fields
     if (useRateQuantity) {
       newItem.rate = parseFloat(newItemRate);
       newItem.quantity = parseFloat(newItemQuantity);
@@ -94,7 +88,7 @@ const SplitDetails: React.FC = () => {
     };
     
     setBill(updatedBill);
-    saveBill(updatedBill); // Save updated bill to storage
+    saveBill(updatedBill);
     
     setNewItemName("");
     setNewItemAmount("");
@@ -117,7 +111,7 @@ const SplitDetails: React.FC = () => {
     };
     
     setBill(updatedBill);
-    saveBill(updatedBill); // Save updated bill to storage
+    saveBill(updatedBill);
   };
   
   const handleParticipantToggle = (participantId: string) => {
@@ -165,7 +159,6 @@ const SplitDetails: React.FC = () => {
   const handleToggleRateQuantity = () => {
     setUseRateQuantity(!useRateQuantity);
     if (!useRateQuantity) {
-      // When enabling rate × quantity, initialize with sensible defaults
       setNewItemRate(newItemAmount || "0");
       setNewItemQuantity("1");
     }
@@ -174,7 +167,6 @@ const SplitDetails: React.FC = () => {
   const handleCalculateSplit = () => {
     if (!bill) return;
     
-    // Check if we need to set paidBy (for remaining amount after partial payments)
     const totalPaid = partialPayments.reduce((sum, payment) => sum + payment.amount, 0);
     const remainingAmount = bill.totalAmount - totalPaid - discount;
     
@@ -183,21 +175,16 @@ const SplitDetails: React.FC = () => {
       discount,
     };
     
-    // Handle partial payments logic
     if (usePartialPayment) {
       updatedBill.partialPayments = partialPayments;
       
-      // If there's remaining amount to be paid and we have a paidBy, include it
       if (remainingAmount > 0 && paidBy) {
         updatedBill.paidBy = paidBy;
       } else {
-        // If everything is covered by partial payments, we don't need paidBy
         delete updatedBill.paidBy;
       }
     } else {
-      // If not using partial payments, just set paidBy
       updatedBill.paidBy = paidBy;
-      // Delete partialPayments if it exists
       delete updatedBill.partialPayments;
     }
     
@@ -207,23 +194,22 @@ const SplitDetails: React.FC = () => {
   
   if (!bill) {
     return (
-      <Layout showBackButton title="Loading...">
+      <AppLayout showBackButton title="Loading...">
         <div className="flex items-center justify-center h-full py-12">
           <div className="animate-pulse-soft text-center">
             <div className="h-8 w-32 bg-muted/50 rounded mb-4 mx-auto" />
             <div className="h-32 w-full bg-muted/50 rounded" />
           </div>
         </div>
-      </Layout>
+      </AppLayout>
     );
   }
   
-  // Calculate total after partial payments
   const totalPaid = partialPayments.reduce((sum, payment) => sum + payment.amount, 0);
   const remainingAmount = bill.totalAmount - totalPaid - discount;
   
   return (
-    <Layout showBackButton title={bill.title}>
+    <AppLayout showBackButton title={bill.title}>
       <div className="py-6">
         <div className="glass-panel rounded-xl p-4 mb-6">
           <div className="flex justify-between items-center mb-4">
@@ -259,14 +245,12 @@ const SplitDetails: React.FC = () => {
           />
         </div>
         
-        {/* Add the discount input */}
         <DiscountInput 
           totalAmount={bill.totalAmount}
           discount={discount}
           onDiscountChange={handleDiscountChange}
         />
         
-        {/* Payment Method Selection */}
         <div className="glass-panel rounded-xl p-4 mb-6">
           <h2 className="text-lg font-medium mb-3">Payment Method</h2>
           <div className="flex space-x-2 mb-4">
@@ -287,7 +271,6 @@ const SplitDetails: React.FC = () => {
           </div>
         </div>
         
-        {/* Conditional rendering based on payment method */}
         {usePartialPayment ? (
           <PartialPaymentManager 
             participants={bill.participants}
@@ -303,7 +286,6 @@ const SplitDetails: React.FC = () => {
           />
         )}
         
-        {/* Show PaidBy for remaining amount only if there are partial payments */}
         {usePartialPayment && remainingAmount > 0 && (
           <PaidBySelector 
             participants={bill.participants}
@@ -320,7 +302,7 @@ const SplitDetails: React.FC = () => {
           Calculate Split
         </Button>
       </div>
-    </Layout>
+    </AppLayout>
   );
 };
 

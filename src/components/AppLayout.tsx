@@ -1,9 +1,4 @@
 
-// This component needs to be wrapped in <lov-code> and </lov-code>
-// Since we can't modify this file directly, we'll create an extension component
-// that wraps the existing Layout component
-
-// File: src/components/AppLayout.tsx
 import React from "react";
 import Layout from "./Layout";
 import { BottomNavigation } from "./BottomNavigation";
