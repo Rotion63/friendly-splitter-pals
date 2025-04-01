@@ -1,32 +1,41 @@
 
-// This component needs to be wrapped in <lov-code> and </lov-code>
-// Since we can't modify this file directly, we'll create an extension component
-// that wraps the existing Layout component
-
-// File: src/components/AppLayout.tsx
 import React from "react";
-import Layout from "./Layout";
-import { BottomNavigation } from "./BottomNavigation";
+import { ChevronLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-interface AppLayoutProps {
+interface LayoutProps {
   children: React.ReactNode;
   title: string;
   showBackButton?: boolean;
 }
 
-export const AppLayout: React.FC<AppLayoutProps> = ({ 
+const Layout: React.FC<LayoutProps> = ({ 
   children, 
   title, 
   showBackButton = false 
 }) => {
+  const navigate = useNavigate();
+
   return (
-    <>
-      <Layout title={title} showBackButton={showBackButton}>
-        <div className="pb-16">
-          {children}
+    <div className="flex flex-col min-h-screen">
+      <header className="bg-primary text-white p-4 shadow-md">
+        <div className="flex items-center">
+          {showBackButton && (
+            <button 
+              onClick={() => navigate(-1)} 
+              className="mr-2 p-1 rounded-full hover:bg-primary-foreground/20"
+            >
+              <ChevronLeft size={24} />
+            </button>
+          )}
+          <h1 className="text-xl font-bold">{title}</h1>
         </div>
-      </Layout>
-      <BottomNavigation />
-    </>
+      </header>
+      <main className="flex-1 px-4">
+        {children}
+      </main>
+    </div>
   );
 };
+
+export default Layout;
