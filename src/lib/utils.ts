@@ -1,3 +1,4 @@
+
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { Bill, Participant, PartialPayment, Currency } from "./types";
@@ -84,7 +85,8 @@ export function calculateSplits(bill: Bill): Record<string, number> {
   } 
   // If there's a single payer for the remainder
   else if (bill.paidBy) {
-    result[bill.paidBy] = (result[bill.paidBy] || 0) + effectiveTotalAmount;
+    const payerId = typeof bill.paidBy === 'string' ? bill.paidBy : bill.paidBy.id;
+    result[payerId] = (result[payerId] || 0) + effectiveTotalAmount;
   }
   
   return result;
@@ -107,7 +109,7 @@ export function calculateOptimizedSettlements(bill: Bill) {
       }
     });
   } else if (bill.paidBy) {
-    mainCollector = bill.paidBy;
+    mainCollector = typeof bill.paidBy === 'string' ? bill.paidBy : bill.paidBy.id;
   }
   
   if (!mainCollector) return [];
