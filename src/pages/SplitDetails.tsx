@@ -12,7 +12,7 @@ import PaidBySelector from "@/components/SplitBill/PaidBySelector";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BillItem, Participant, Bill } from "@/lib/types";
-import { getBill, updateBill } from "@/lib/billStorage";
+import { getBill, saveBill } from "@/lib/billStorage";
 import { Plus, AlertCircle, Receipt } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import DiscountInput from "@/components/SplitBill/DiscountInput";
@@ -26,10 +26,12 @@ const SplitDetails: React.FC = () => {
   const [items, setItems] = useState<BillItem[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [title, setTitle] = useState("");
-  const [paidBy, setPaidBy] = useState<Participant | null>(null);
+  const [paidBy, setPaidBy] = useState<string>("");
+  const [paidByParticipant, setPaidByParticipant] = useState<Participant | null>(null);
   const [discount, setDiscount] = useState(0);
   const [tax, setTax] = useState(0);
   const [tip, setTip] = useState(0);
+  const [isAddingItem, setIsAddingItem] = useState(false);
   
   // Load bill data
   useEffect(() => {
@@ -46,14 +48,33 @@ const SplitDetails: React.FC = () => {
     setItems(loadedBill.items || []);
     setParticipants(loadedBill.participants || []);
     setTitle(loadedBill.title);
-    setPaidBy(loadedBill.paidBy || null);
+    
+    // Handle paidBy which can be either a string or Participant
+    if (typeof loadedBill.paidBy === 'string') {
+      setPaidBy(loadedBill.paidBy);
+      // Find the corresponding participant
+      const participant = loadedBill.participants.find(p => p.id === loadedBill.paidBy);
+      if (participant) {
+        setPaidByParticipant(participant);
+      }
+    } else if (loadedBill.paidBy) {
+      setPaidBy(loadedBill.paidBy.id);
+      setPaidByParticipant(loadedBill.paidBy);
+    }
+    
     setDiscount(loadedBill.discount || 0);
     setTax(loadedBill.tax || 0);
     setTip(loadedBill.tip || 0);
   }, [id, navigate]);
   
   const handleAddItem = (item: BillItem) => {
-    setItems([...items, item]);
+    // Convert any price property to amount if it exists
+    const newItem: BillItem = {
+      ...item,
+      amount: item.price || item.amount
+    };
+    setItems([...items, newItem]);
+    setIsAddingItem(false);
   };
   
   const handleRemoveItem = (id: string) => {
@@ -68,8 +89,17 @@ const SplitDetails: React.FC = () => {
     setParticipants(participants.filter(p => p.id !== id));
   };
   
-  const handlePaidByChange = (participant: Participant) => {
-    setPaidBy(participant);
+  const handlePaidByChange = (id: string) => {
+    setPaidBy(id);
+    const participant = participants.find(p => p.id === id);
+    if (participant) {
+      setPaidByParticipant(participant);
+    }
+  };
+  
+  const handlePaidBySelect = (participant: Participant) => {
+    setPaidBy(participant.id);
+    setPaidByParticipant(participant);
   };
   
   const handleSave = () => {
@@ -97,27 +127,26 @@ const SplitDetails: React.FC = () => {
       totalAmount: calculateTotal()
     };
     
-    updateBill(updatedBill);
+    saveBill(updatedBill);
     toast.success("Bill updated successfully!");
     navigate(`/split-summary/${id}`);
   };
   
   const calculateTotal = (): number => {
-    const itemsTotal = items.reduce((sum, item) => sum + item.price, 0);
+    const itemsTotal = items.reduce((sum, item) => sum + (item.amount || 0), 0);
     const afterDiscount = itemsTotal - discount;
     const withTax = afterDiscount + tax;
     const withTip = withTax + tip;
     return withTip;
   };
   
-  const handleItemsFromReceipt = (scannedItems: Array<{ name: string; price: number }>) => {
+  const handleItemsFromReceipt = (scannedItems: Array<{ name: string; amount: number }>) => {
     // Generate IDs for the items and convert them to BillItems
-    const newItems = scannedItems.map(item => ({
+    const newItems: BillItem[] = scannedItems.map(item => ({
       id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       name: item.name,
-      price: item.price,
-      participants: [...participants], // Default to all participants
-      shared: true
+      amount: item.amount,
+      participants: participants.map(p => p.id), // Default to all participants
     }));
     
     setItems([...items, ...newItems]);
@@ -186,13 +215,15 @@ const SplitDetails: React.FC = () => {
               <BillItemList
                 items={items}
                 participants={participants}
-                onRemove={handleRemoveItem}
+                onRemoveItem={handleRemoveItem}
               />
             )}
             
             <AddBillItem
-              onAddItem={handleAddItem}
               participants={participants}
+              isAdding={isAddingItem}
+              onCancel={() => setIsAddingItem(false)}
+              onAddItem={handleAddItem}
             />
             
             <AddReceiptButton onItemsDetected={handleItemsFromReceipt} />
@@ -226,9 +257,9 @@ const SplitDetails: React.FC = () => {
             </div>
             
             <DiscountInput
-              value={discount}
-              onChange={setDiscount}
-              max={items.reduce((sum, item) => sum + item.price, 0)}
+              totalAmount={items.reduce((sum, item) => sum + (item.amount || 0), 0)}
+              discount={discount}
+              onDiscountChange={setDiscount}
             />
           </div>
           
@@ -236,15 +267,17 @@ const SplitDetails: React.FC = () => {
             <Label>Who Paid?</Label>
             <PaidBySelector
               participants={participants}
-              selectedParticipant={paidBy}
-              onSelect={handlePaidByChange}
+              paidBy={paidBy}
+              onPaidByChange={handlePaidByChange}
+              selectedParticipant={paidByParticipant}
+              onSelect={handlePaidBySelect}
             />
           </div>
           
           <div className="bg-muted/20 p-4 rounded-lg">
             <div className="flex justify-between mb-2">
               <span className="text-muted-foreground">Subtotal:</span>
-              <span>${items.reduce((sum, item) => sum + item.price, 0).toFixed(2)}</span>
+              <span>${items.reduce((sum, item) => sum + (item.amount || 0), 0).toFixed(2)}</span>
             </div>
             <div className="flex justify-between mb-2">
               <span className="text-muted-foreground">Discount:</span>

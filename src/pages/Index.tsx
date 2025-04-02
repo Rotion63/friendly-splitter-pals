@@ -137,8 +137,8 @@ const HomePage: React.FC = () => {
                       key={bill.id}
                       bill={bill}
                       index={index}
-                      onView={() => handleViewBill(bill.id)}
-                      onEdit={() => handleEditBill(bill.id)}
+                      onClick={handleViewBill}
+                      onEdit={handleEditBill}
                     />
                   ))}
                 </motion.div>
@@ -169,8 +169,8 @@ const HomePage: React.FC = () => {
                       key={bill.id}
                       bill={bill}
                       index={index}
-                      onView={() => handleViewBill(bill.id)}
-                      onEdit={() => handleEditBill(bill.id)}
+                      onClick={handleViewBill}
+                      onEdit={handleEditBill}
                       settled={true}
                     />
                   ))}

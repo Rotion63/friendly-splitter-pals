@@ -2,68 +2,191 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Plus } from "lucide-react";
-import { Participant } from "@/lib/types";
+import { Participant, BillItem } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 
 interface AddBillItemProps {
-  isAdding: boolean;
+  isAdding?: boolean;
   participants: Participant[];
-  newItemName: string;
-  newItemAmount: string;
-  newItemParticipants: string[];
-  onNewItemNameChange: (value: string) => void;
-  onNewItemAmountChange: (value: string) => void;
-  onParticipantToggle: (id: string) => void;
-  onSelectAll: () => void;
-  onAdd: () => void;
-  onCancel: () => void;
-  newItemRate: string;
-  newItemQuantity: string;
-  onNewItemRateChange: (value: string) => void;
-  onNewItemQuantityChange: (value: string) => void;
-  useRateQuantity: boolean;
-  onToggleRateQuantity: () => void;
+  newItemName?: string;
+  newItemAmount?: string;
+  newItemParticipants?: string[];
+  onNewItemNameChange?: (value: string) => void;
+  onNewItemAmountChange?: (value: string) => void;
+  onParticipantToggle?: (id: string) => void;
+  onSelectAll?: () => void;
+  onAdd?: () => void;
+  onCancel?: () => void;
+  newItemRate?: string;
+  newItemQuantity?: string;
+  onNewItemRateChange?: (value: string) => void;
+  onNewItemQuantityChange?: (value: string) => void;
+  useRateQuantity?: boolean;
+  onToggleRateQuantity?: () => void;
+  onAddItem?: (item: BillItem) => void; // Added for compatibility
 }
 
 const AddBillItem: React.FC<AddBillItemProps> = ({
-  isAdding,
+  isAdding: externalIsAdding,
   participants,
-  newItemName,
-  newItemAmount,
-  newItemParticipants,
+  newItemName: externalNewItemName,
+  newItemAmount: externalNewItemAmount,
+  newItemParticipants: externalNewItemParticipants,
   onNewItemNameChange,
   onNewItemAmountChange,
   onParticipantToggle,
   onSelectAll,
   onAdd,
   onCancel,
-  newItemRate,
-  newItemQuantity,
+  newItemRate: externalNewItemRate,
+  newItemQuantity: externalNewItemQuantity,
   onNewItemRateChange,
   onNewItemQuantityChange,
-  useRateQuantity,
+  useRateQuantity: externalUseRateQuantity,
   onToggleRateQuantity,
+  onAddItem
 }) => {
+  // Internal state management if not provided externally
+  const [internalIsAdding, setInternalIsAdding] = useState(false);
+  const [internalNewItemName, setInternalNewItemName] = useState("");
+  const [internalNewItemAmount, setInternalNewItemAmount] = useState("");
+  const [internalNewItemParticipants, setInternalNewItemParticipants] = useState<string[]>([]);
+  const [internalNewItemRate, setInternalNewItemRate] = useState("");
+  const [internalNewItemQuantity, setInternalNewItemQuantity] = useState("");
+  const [internalUseRateQuantity, setInternalUseRateQuantity] = useState(false);
+
+  // Use external values if provided, otherwise use internal state
+  const isAdding = externalIsAdding !== undefined ? externalIsAdding : internalIsAdding;
+  const newItemName = externalNewItemName !== undefined ? externalNewItemName : internalNewItemName;
+  const newItemAmount = externalNewItemAmount !== undefined ? externalNewItemAmount : internalNewItemAmount;
+  const newItemParticipants = externalNewItemParticipants !== undefined ? externalNewItemParticipants : internalNewItemParticipants;
+  const newItemRate = externalNewItemRate !== undefined ? externalNewItemRate : internalNewItemRate;
+  const newItemQuantity = externalNewItemQuantity !== undefined ? externalNewItemQuantity : internalNewItemQuantity;
+  const useRateQuantity = externalUseRateQuantity !== undefined ? externalUseRateQuantity : internalUseRateQuantity;
+
+  // Handler functions
+  const handleNewItemNameChange = (value: string) => {
+    if (onNewItemNameChange) {
+      onNewItemNameChange(value);
+    } else {
+      setInternalNewItemName(value);
+    }
+  };
+
+  const handleNewItemAmountChange = (value: string) => {
+    if (onNewItemAmountChange) {
+      onNewItemAmountChange(value);
+    } else {
+      setInternalNewItemAmount(value);
+    }
+  };
+
+  const handleParticipantToggle = (id: string) => {
+    if (onParticipantToggle) {
+      onParticipantToggle(id);
+    } else {
+      setInternalNewItemParticipants(prev => 
+        prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
+      );
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (onSelectAll) {
+      onSelectAll();
+    } else {
+      if (internalNewItemParticipants.length === participants.length) {
+        setInternalNewItemParticipants([]);
+      } else {
+        setInternalNewItemParticipants(participants.map(p => p.id));
+      }
+    }
+  };
+
+  const handleNewItemRateChange = (value: string) => {
+    if (onNewItemRateChange) {
+      onNewItemRateChange(value);
+    } else {
+      setInternalNewItemRate(value);
+    }
+  };
+
+  const handleNewItemQuantityChange = (value: string) => {
+    if (onNewItemQuantityChange) {
+      onNewItemQuantityChange(value);
+    } else {
+      setInternalNewItemQuantity(value);
+    }
+  };
+
+  const handleToggleRateQuantity = () => {
+    if (onToggleRateQuantity) {
+      onToggleRateQuantity();
+    } else {
+      setInternalUseRateQuantity(prev => !prev);
+    }
+  };
+
+  // Add item handler
+  const handleAdd = () => {
+    if (onAdd) {
+      onAdd();
+    } else if (onAddItem) {
+      // Create a new item
+      const newItem: BillItem = {
+        id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        name: newItemName,
+        amount: parseFloat(newItemAmount) || 0,
+        participants: newItemParticipants,
+        rate: useRateQuantity ? parseFloat(newItemRate) || 0 : undefined,
+        quantity: useRateQuantity ? parseInt(newItemQuantity) || 0 : undefined
+      };
+      
+      onAddItem(newItem);
+      
+      // Reset form
+      setInternalIsAdding(false);
+      setInternalNewItemName("");
+      setInternalNewItemAmount("");
+      setInternalNewItemParticipants([]);
+      setInternalNewItemRate("");
+      setInternalNewItemQuantity("");
+      setInternalUseRateQuantity(false);
+    }
+  };
+
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel();
+    } else {
+      setInternalIsAdding(false);
+    }
+  };
+
+  const handleToggleForm = () => {
+    setInternalIsAdding(prev => !prev);
+  };
+
   // Effect to update amount when using rate * quantity
   useEffect(() => {
     if (useRateQuantity && newItemRate && newItemQuantity) {
       const rate = parseFloat(newItemRate);
       const quantity = parseFloat(newItemQuantity);
       if (!isNaN(rate) && !isNaN(quantity)) {
-        onNewItemAmountChange((rate * quantity).toFixed(2));
+        handleNewItemAmountChange((rate * quantity).toFixed(2));
       }
     }
-  }, [newItemRate, newItemQuantity, useRateQuantity, onNewItemAmountChange]);
+  }, [newItemRate, newItemQuantity, useRateQuantity]);
 
   if (!isAdding) {
     return (
       <Button 
         variant="outline" 
         className="w-full"
-        onClick={onCancel}
+        onClick={onCancel ? handleCancel : handleToggleForm}
       >
         <Plus className="h-4 w-4 mr-2" />
         Add Item
@@ -86,7 +209,7 @@ const AddBillItem: React.FC<AddBillItemProps> = ({
           <Input
             id="itemName"
             value={newItemName}
-            onChange={(e) => onNewItemNameChange(e.target.value)}
+            onChange={(e) => handleNewItemNameChange(e.target.value)}
             placeholder="e.g., Pizza, Drinks"
           />
         </div>
@@ -95,7 +218,7 @@ const AddBillItem: React.FC<AddBillItemProps> = ({
           <Checkbox 
             id="useRateQuantity" 
             checked={useRateQuantity}
-            onCheckedChange={onToggleRateQuantity}
+            onCheckedChange={handleToggleRateQuantity}
           />
           <Label 
             htmlFor="useRateQuantity" 
@@ -112,7 +235,7 @@ const AddBillItem: React.FC<AddBillItemProps> = ({
               <Input
                 id="itemRate"
                 value={newItemRate}
-                onChange={(e) => onNewItemRateChange(e.target.value)}
+                onChange={(e) => handleNewItemRateChange(e.target.value)}
                 placeholder="0.00"
                 type="number"
                 step="0.01"
@@ -124,7 +247,7 @@ const AddBillItem: React.FC<AddBillItemProps> = ({
               <Input
                 id="itemQuantity"
                 value={newItemQuantity}
-                onChange={(e) => onNewItemQuantityChange(e.target.value)}
+                onChange={(e) => handleNewItemQuantityChange(e.target.value)}
                 placeholder="1"
                 type="number"
                 step="1"
@@ -147,7 +270,7 @@ const AddBillItem: React.FC<AddBillItemProps> = ({
             <Input
               id="itemAmount"
               value={newItemAmount}
-              onChange={(e) => onNewItemAmountChange(e.target.value)}
+              onChange={(e) => handleNewItemAmountChange(e.target.value)}
               placeholder="0.00"
               type="number"
               step="0.01"
@@ -163,7 +286,7 @@ const AddBillItem: React.FC<AddBillItemProps> = ({
               variant="ghost"
               size="sm"
               className="h-7 text-xs"
-              onClick={onSelectAll}
+              onClick={handleSelectAll}
             >
               {newItemParticipants.length === participants.length 
                 ? "Deselect All" 
@@ -180,7 +303,7 @@ const AddBillItem: React.FC<AddBillItemProps> = ({
                 <Checkbox 
                   id={`participant-${participant.id}`}
                   checked={newItemParticipants.includes(participant.id)}
-                  onCheckedChange={() => onParticipantToggle(participant.id)}
+                  onCheckedChange={() => handleParticipantToggle(participant.id)}
                 />
                 <Label 
                   htmlFor={`participant-${participant.id}`}
@@ -196,7 +319,7 @@ const AddBillItem: React.FC<AddBillItemProps> = ({
       
       <div className="flex space-x-2">
         <Button
-          onClick={onAdd}
+          onClick={handleAdd}
           disabled={!newItemName.trim() || !newItemAmount || newItemParticipants.length === 0 || 
             (useRateQuantity && (!newItemRate || !newItemQuantity))}
           className="flex-1"
@@ -205,7 +328,7 @@ const AddBillItem: React.FC<AddBillItemProps> = ({
         </Button>
         <Button
           variant="outline"
-          onClick={onCancel}
+          onClick={handleCancel ? handleCancel : handleToggleForm}
         >
           Cancel
         </Button>

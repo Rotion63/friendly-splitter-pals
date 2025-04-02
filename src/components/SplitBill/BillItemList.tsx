@@ -10,13 +10,14 @@ interface BillItemListProps {
   items: BillItem[];
   participants?: Participant[];
   onRemoveItem: (id: string) => void;
-  onRemove?: (id: string) => void; // Added for backward compatibility
+  onRemove?: (id: string) => void; // Keep for backward compatibility
 }
 
 const BillItemList: React.FC<BillItemListProps> = ({ 
   items, 
   onRemoveItem, 
-  onRemove 
+  onRemove,
+  participants
 }) => {
   // Use onRemove if onRemoveItem is not provided for backward compatibility
   const handleRemoveItem = onRemoveItem || onRemove;
