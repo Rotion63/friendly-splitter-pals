@@ -5,14 +5,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
 import FriendsList from "@/components/SplitBill/FriendsList";
 import BillCard from "@/components/SplitBill/BillCard";
-import NewSplitButton from "@/components/SplitBill/NewSplitButton";
-import UserGuide from "@/components/SplitBill/UserGuide";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Bill, Participant } from "@/lib/types";
 import { getBills } from "@/lib/billStorage";
-import { getFriends, saveFriend, removeFriend } from "@/lib/friendsStorage";
+import { getFriends, addFriend, removeFriend } from "@/lib/friendsStorage";
 import { Button } from "@/components/ui/button";
-import { Edit, Settings, Users, MapPin } from "lucide-react";
+import { Settings, Users } from "lucide-react";
+import UserGuide from "@/components/SplitBill/UserGuide";
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -51,13 +50,13 @@ const HomePage: React.FC = () => {
   }, []);
 
   const handleAddFriend = (friend: Participant) => {
-    saveFriend(friend);
-    setFriends([...friends, friend]);
+    const updatedFriends = addFriend(friend);
+    setFriends(updatedFriends);
   };
 
   const handleRemoveFriend = (id: string) => {
-    removeFriend(id);
-    setFriends(friends.filter(f => f.id !== id));
+    const updatedFriends = removeFriend(id);
+    setFriends(updatedFriends);
   };
 
   const handleViewBill = (billId: string) => {
@@ -124,7 +123,7 @@ const HomePage: React.FC = () => {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                 >
-                  {showGuide && <UserGuide onDismiss={handleCloseGuide} />}
+                  <UserGuide onDismiss={handleCloseGuide} />
                 </motion.div>
               ) : (
                 <motion.div
@@ -138,8 +137,8 @@ const HomePage: React.FC = () => {
                       key={bill.id}
                       bill={bill}
                       index={index}
-                      onClick={handleViewBill}
-                      onEdit={handleEditBill}
+                      onClick={() => handleViewBill(bill.id)}
+                      onEdit={() => handleEditBill(bill.id)}
                     />
                   ))}
                 </motion.div>
@@ -170,8 +169,8 @@ const HomePage: React.FC = () => {
                       key={bill.id}
                       bill={bill}
                       index={index}
-                      onClick={handleViewBill}
-                      onEdit={handleEditBill}
+                      onClick={() => handleViewBill(bill.id)}
+                      onEdit={() => handleEditBill(bill.id)}
                       settled={true}
                     />
                   ))}
@@ -180,8 +179,6 @@ const HomePage: React.FC = () => {
             </AnimatePresence>
           </TabsContent>
         </Tabs>
-        
-        <NewSplitButton />
       </div>
     </AppLayout>
   );
