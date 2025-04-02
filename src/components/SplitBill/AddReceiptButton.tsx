@@ -1,15 +1,16 @@
 
 import React, { useState } from "react";
-import { Receipt, Scan } from "lucide-react";
+import { Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
 import ReceiptScanner from "./ReceiptScanner";
+import { BillItem } from "@/lib/types";
 
 interface AddReceiptButtonProps {
-  onItemsDetected: (items: Array<{ name: string; price: number }>) => void;
+  onItemsDetected: (items: Array<{ name: string; amount: number }>) => void;
 }
 
 const AddReceiptButton: React.FC<AddReceiptButtonProps> = ({ onItemsDetected }) => {
@@ -20,7 +21,13 @@ const AddReceiptButton: React.FC<AddReceiptButtonProps> = ({ onItemsDetected }) 
   };
   
   const handleItemsDetected = (items: Array<{ name: string; price: number }>) => {
-    onItemsDetected(items);
+    // Convert price to amount to match BillItem type
+    const convertedItems = items.map(item => ({
+      name: item.name,
+      amount: item.price
+    }));
+    
+    onItemsDetected(convertedItems);
     setShowScanner(false);
   };
   

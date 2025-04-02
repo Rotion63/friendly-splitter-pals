@@ -16,6 +16,11 @@ export const getBillById = (id: string): Bill | null => {
   return bills.find(bill => bill.id === id) || null;
 };
 
+// Added getBill function as an alias for getBillById for backward compatibility
+export const getBill = (id: string): Bill | null => {
+  return getBillById(id);
+};
+
 // Save a bill (creates new or updates existing)
 export const saveBill = (bill: Bill): void => {
   const bills = getBills();
@@ -28,6 +33,11 @@ export const saveBill = (bill: Bill): void => {
   }
   
   localStorage.setItem(BILLS_STORAGE_KEY, JSON.stringify(bills));
+};
+
+// Added updateBill function as an alias for saveBill for better semantics
+export const updateBill = (bill: Bill): void => {
+  saveBill(bill);
 };
 
 // Remove a bill by ID
