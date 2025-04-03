@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
 import { Bill, BillItem, PartialPayment, MenuItem } from "@/lib/types";
@@ -16,11 +15,12 @@ import BillScanner from "@/components/SplitBill/BillScanner";
 import MenuSelector from "@/components/SplitBill/MenuSelector";
 import { createEmptyBill, getBillById, saveBill } from "@/lib/billStorage";
 import { formatCurrency } from "@/lib/utils";
-import { Camera, Receipt, Plus } from "lucide-react";
+import { Camera, Receipt, Plus, ArrowUp } from "lucide-react";
 
 const SplitDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [bill, setBill] = useState<Bill | null>(null);
   const [newItemName, setNewItemName] = useState("");
   const [newItemAmount, setNewItemAmount] = useState("");
@@ -35,6 +35,8 @@ const SplitDetails: React.FC = () => {
   const [useRateQuantity, setUseRateQuantity] = useState(false);
   const [activeTab, setActiveTab] = useState("manual");
   const [showBillScanner, setShowBillScanner] = useState(false);
+  
+  const tripId = new URLSearchParams(location.search).get('tripId');
   
   useEffect(() => {
     if (!id) {
@@ -54,11 +56,17 @@ const SplitDetails: React.FC = () => {
       }
       
       setDiscount(foundBill.discount || 0);
+      
+      if (tripId && !foundBill.tripId) {
+        const updatedBill = { ...foundBill, tripId };
+        saveBill(updatedBill);
+        setBill(updatedBill);
+      }
     } else {
       toast.error("Bill not found");
       navigate("/");
     }
-  }, [id, navigate]);
+  }, [id, navigate, tripId]);
   
   useEffect(() => {
     if (!usePartialPayment) {
@@ -192,7 +200,9 @@ const SplitDetails: React.FC = () => {
       }
     } else {
       updatedBill.paidBy = paidBy;
-      delete updatedBill.partialPayments;
+      if (!updatedBill.partialPayments) {
+        updatedBill.partialPayments = [];
+      }
     }
     
     saveBill(updatedBill);
@@ -253,6 +263,12 @@ const SplitDetails: React.FC = () => {
     saveBill(updatedBill);
   };
   
+  const handleBackToTrip = () => {
+    if (bill?.tripId) {
+      navigate(`/trip/${bill.tripId}`);
+    }
+  };
+  
   if (!bill) {
     return (
       <AppLayout showBackButton title="Loading...">
@@ -271,6 +287,20 @@ const SplitDetails: React.FC = () => {
   
   return (
     <AppLayout showBackButton title={bill?.title || "Loading..."}>
+      {bill.tripId && (
+        <div className="pt-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="flex items-center text-muted-foreground"
+            onClick={handleBackToTrip}
+          >
+            <ArrowUp className="h-3 w-3 mr-1 rotate-315" />
+            Back to trip
+          </Button>
+        </div>
+      )}
+      
       <div className="py-6">
         <div className="glass-panel rounded-xl p-4 mb-6">
           <div className="flex justify-between items-center mb-4">

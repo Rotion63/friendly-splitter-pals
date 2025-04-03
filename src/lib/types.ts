@@ -3,6 +3,7 @@ export interface Participant {
   id: string;
   name: string;
   avatar?: string;
+  balance?: number; // Track each participant's balance
 }
 
 export interface BillItem {
@@ -44,6 +45,7 @@ export interface Bill {
   discount?: number; // Discount amount (not percentage)
   settlements?: Settlement[]; // Track who has settled with whom
   isDummy?: boolean; // Flag to identify dummy bills
+  tripId?: string; // Link to a trip if applicable
 }
 
 export interface MenuItem {
@@ -62,4 +64,14 @@ export interface FriendGroup {
   id: string;
   name: string;
   members: Participant[];
+}
+
+export interface Trip {
+  id: string;
+  name: string;
+  description?: string;
+  startDate?: string;
+  endDate?: string;
+  participants: Participant[];
+  bills: string[]; // Array of bill IDs associated with this trip
 }
