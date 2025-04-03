@@ -12,7 +12,6 @@ export interface BillItem {
   participants: string[]; // Participant IDs
   rate?: number;
   quantity?: number;
-  price?: number; // Added for backward compatibility
 }
 
 export interface PartialPayment {
@@ -40,11 +39,9 @@ export interface Bill {
   totalAmount: number;
   participants: Participant[];
   items: BillItem[];
-  paidBy?: string | Participant; // Modified to support both string and Participant
+  paidBy?: string; // Participant ID
   partialPayments?: PartialPayment[]; // For multiple people paying
   discount?: number; // Discount amount (not percentage)
-  tax?: number; // Added tax property
-  tip?: number; // Added tip property
   settlements?: Settlement[]; // Track who has settled with whom
   isDummy?: boolean; // Flag to identify dummy bills
 }

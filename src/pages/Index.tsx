@@ -5,13 +5,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
 import FriendsList from "@/components/SplitBill/FriendsList";
 import BillCard from "@/components/SplitBill/BillCard";
+import NewSplitButton from "@/components/SplitBill/NewSplitButton";
+import UserGuide from "@/components/SplitBill/UserGuide";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Bill, Participant } from "@/lib/types";
 import { getBills } from "@/lib/billStorage";
-import { getFriends, addFriend, removeFriend } from "@/lib/friendsStorage";
+import { getFriends, saveFriend, removeFriend } from "@/lib/friendsStorage";
 import { Button } from "@/components/ui/button";
-import { Settings, Users } from "lucide-react";
-import UserGuide from "@/components/SplitBill/UserGuide";
+import { Edit, Settings, Users, MapPin } from "lucide-react";
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -50,13 +51,13 @@ const HomePage: React.FC = () => {
   }, []);
 
   const handleAddFriend = (friend: Participant) => {
-    const updatedFriends = addFriend(friend);
-    setFriends(updatedFriends);
+    saveFriend(friend);
+    setFriends([...friends, friend]);
   };
 
   const handleRemoveFriend = (id: string) => {
-    const updatedFriends = removeFriend(id);
-    setFriends(updatedFriends);
+    removeFriend(id);
+    setFriends(friends.filter(f => f.id !== id));
   };
 
   const handleViewBill = (billId: string) => {
@@ -123,7 +124,7 @@ const HomePage: React.FC = () => {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                 >
-                  <UserGuide onDismiss={handleCloseGuide} />
+                  {showGuide && <UserGuide onDismiss={handleCloseGuide} />}
                 </motion.div>
               ) : (
                 <motion.div
@@ -179,6 +180,8 @@ const HomePage: React.FC = () => {
             </AnimatePresence>
           </TabsContent>
         </Tabs>
+        
+        <NewSplitButton />
       </div>
     </AppLayout>
   );

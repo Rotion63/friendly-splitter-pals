@@ -2,26 +2,16 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Receipt, Trash2 } from "lucide-react";
-import { BillItem, Participant } from "@/lib/types";
+import { BillItem } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
 
 interface BillItemListProps {
   items: BillItem[];
-  participants?: Participant[];
   onRemoveItem: (id: string) => void;
-  onRemove?: (id: string) => void; // Keep for backward compatibility
 }
 
-const BillItemList: React.FC<BillItemListProps> = ({ 
-  items, 
-  onRemoveItem, 
-  onRemove,
-  participants
-}) => {
-  // Use onRemove if onRemoveItem is not provided for backward compatibility
-  const handleRemoveItem = onRemoveItem || onRemove;
-
+const BillItemList: React.FC<BillItemListProps> = ({ items, onRemoveItem }) => {
   return (
     <AnimatePresence>
       {items.length > 0 ? (
@@ -53,7 +43,7 @@ const BillItemList: React.FC<BillItemListProps> = ({
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => handleRemoveItem(item.id)}
+                onClick={() => onRemoveItem(item.id)}
                 className="ml-2 text-muted-foreground hover:text-destructive"
               >
                 <Trash2 className="h-4 w-4" />

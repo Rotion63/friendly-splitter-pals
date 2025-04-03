@@ -1,3 +1,4 @@
+
 import React from "react";
 import { motion } from "framer-motion";
 import { formatCurrency } from "@/lib/utils";
@@ -12,7 +13,6 @@ interface BillCardProps {
   onClick?: (id: string) => void;
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
-  onView?: (id: string) => void;
   settled?: boolean;
 }
 
@@ -22,7 +22,6 @@ const BillCard: React.FC<BillCardProps> = ({
   onClick, 
   onEdit, 
   onDelete,
-  onView,
   settled = false
 }) => {
   const handleDelete = (e: React.MouseEvent) => {
@@ -48,15 +47,6 @@ const BillCard: React.FC<BillCardProps> = ({
     }
   };
 
-  const handleView = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (onView) {
-      onView(bill.id);
-    } else if (onClick) {
-      onClick(bill.id);
-    }
-  };
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -68,7 +58,7 @@ const BillCard: React.FC<BillCardProps> = ({
       }}
     >
       <div 
-        onClick={handleView}
+        onClick={handleClick}
         className="block w-full cursor-pointer"
       >
         <div className={`glass-panel rounded-xl overflow-hidden card-lift p-4 mb-4 ${bill.isDummy ? 'bg-muted/70' : ''} ${settled ? 'opacity-70' : ''}`}>
