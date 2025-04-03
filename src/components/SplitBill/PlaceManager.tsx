@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,8 +26,9 @@ import {
   addMenuItem,
   removeMenuItem
 } from "@/lib/placesStorage";
-import { Trash2, Plus, MapPin } from "lucide-react";
+import { Trash2, Plus, MapPin, Camera, Upload, FolderPlus } from "lucide-react";
 import { toast } from "sonner";
+import MenuScanner from "@/components/SplitBill/MenuScanner";
 
 interface PlaceManagerProps {
   onSelectPlace?: (place: Place) => void;
@@ -47,9 +47,10 @@ const PlaceManager: React.FC<PlaceManagerProps> = ({
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [newMenuItemName, setNewMenuItemName] = useState("");
   const [newMenuItemPrice, setNewMenuItemPrice] = useState("");
+  const [showMenuScanner, setShowMenuScanner] = useState(false);
+  const [initialContribution, setInitialContribution] = useState("");
 
   useEffect(() => {
-    // Load places
     setPlaces(getPlaces());
   }, []);
 
@@ -61,11 +62,15 @@ const PlaceManager: React.FC<PlaceManagerProps> = ({
 
     const newPlace = createEmptyPlace(newPlaceName);
     
+    if (initialContribution && !isNaN(parseFloat(initialContribution)) && parseFloat(initialContribution) > 0) {
+      newPlace.initialContribution = parseFloat(initialContribution);
+    }
+    
     savePlace(newPlace);
     setPlaces([...places, newPlace]);
     
-    // Reset form
     setNewPlaceName("");
+    setInitialContribution("");
     setShowAddPlaceDialog(false);
     
     toast.success(`${newPlaceName} place created`);
@@ -80,7 +85,6 @@ const PlaceManager: React.FC<PlaceManagerProps> = ({
   const handleEditPlace = (place: Place) => {
     setEditingPlaceId(place.id);
     setNewPlaceName(place.name);
-    // Implement edit functionality if needed
   };
 
   const handleOpenAddMenuDialog = (placeId: string) => {
@@ -110,7 +114,6 @@ const PlaceManager: React.FC<PlaceManagerProps> = ({
 
     addMenuItem(selectedPlaceId, newMenuItem);
     
-    // Update state to reflect changes
     setPlaces(places.map(place => {
       if (place.id === selectedPlaceId) {
         return {
@@ -121,7 +124,6 @@ const PlaceManager: React.FC<PlaceManagerProps> = ({
       return place;
     }));
     
-    // Reset form
     setNewMenuItemName("");
     setNewMenuItemPrice("");
     setShowAddMenuItemDialog(false);
@@ -132,7 +134,6 @@ const PlaceManager: React.FC<PlaceManagerProps> = ({
   const handleDeleteMenuItem = (placeId: string, menuItemId: string) => {
     removeMenuItem(placeId, menuItemId);
     
-    // Update state to reflect changes
     setPlaces(places.map(place => {
       if (place.id === placeId) {
         return {
@@ -146,12 +147,46 @@ const PlaceManager: React.FC<PlaceManagerProps> = ({
     toast.success("Menu item removed");
   };
 
+  const handleMenuScanned = (menuItems: { name: string; price: number }[]) => {
+    if (!selectedPlaceId) return;
+    
+    let updatedItems = 0;
+    
+    menuItems.forEach(item => {
+      const newMenuItem: MenuItem = {
+        id: "",  // Will be generated in the storage function
+        name: item.name.trim(),
+        price: item.price
+      };
+      
+      addMenuItem(selectedPlaceId, newMenuItem);
+      updatedItems++;
+    });
+    
+    setPlaces(places.map(place => {
+      if (place.id === selectedPlaceId) {
+        const newMenuItems = menuItems.map(item => ({
+          id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          name: item.name,
+          price: item.price
+        }));
+        
+        return {
+          ...place,
+          menu: [...place.menu, ...newMenuItems]
+        };
+      }
+      return place;
+    }));
+    
+    toast.success(`Added ${updatedItems} menu items`);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium">Places & Menus</h3>
         
-        {/* Add Place Dialog */}
         <Dialog open={showAddPlaceDialog} onOpenChange={setShowAddPlaceDialog}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm">
@@ -173,6 +208,21 @@ const PlaceManager: React.FC<PlaceManagerProps> = ({
                   placeholder="e.g., Campus Cafeteria, Office Canteen"
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="initial-contribution">Initial Contribution (Optional)</Label>
+                <Input 
+                  id="initial-contribution" 
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={initialContribution} 
+                  onChange={(e) => setInitialContribution(e.target.value)}
+                  placeholder="Amount collected for group expenses"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Money collected upfront to pay for group expenses
+                </p>
+              </div>
             </div>
             <DialogFooter className="sm:justify-start">
               <DialogClose asChild>
@@ -190,7 +240,6 @@ const PlaceManager: React.FC<PlaceManagerProps> = ({
           </DialogContent>
         </Dialog>
         
-        {/* Add Menu Item Dialog */}
         <Dialog open={showAddMenuItemDialog} onOpenChange={setShowAddMenuItemDialog}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
@@ -234,9 +283,14 @@ const PlaceManager: React.FC<PlaceManagerProps> = ({
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        
+        <MenuScanner
+          isOpen={showMenuScanner}
+          onClose={() => setShowMenuScanner(false)}
+          onMenuProcessed={handleMenuScanned}
+        />
       </div>
 
-      {/* Places List with Accordion for Menu Items */}
       <div className="space-y-2">
         {places.length === 0 ? (
           <p className="text-sm text-muted-foreground">No places added yet</p>
@@ -247,14 +301,32 @@ const PlaceManager: React.FC<PlaceManagerProps> = ({
                 <AccordionTrigger className="py-2">
                   <div className="flex items-center justify-between w-full pr-4">
                     <span>{place.name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {place.menu.length} {place.menu.length === 1 ? 'item' : 'items'}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {place.initialContribution > 0 && (
+                        <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                          ${place.initialContribution.toFixed(2)}
+                        </span>
+                      )}
+                      <span className="text-xs text-muted-foreground">
+                        {place.menu.length} {place.menu.length === 1 ? 'item' : 'items'}
+                      </span>
+                    </div>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
                   <div className="space-y-3 pt-1 pb-3">
-                    {/* Menu Items List */}
+                    {place.initialContribution > 0 && (
+                      <div className="p-2 bg-primary/5 border border-primary/10 rounded-md mb-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            <FolderPlus className="h-4 w-4 text-primary mr-2" />
+                            <span className="text-sm font-medium">Initial Contribution</span>
+                          </div>
+                          <span className="font-medium">${place.initialContribution.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    )}
+                    
                     {place.menu.length === 0 ? (
                       <p className="text-sm text-muted-foreground">No menu items added yet</p>
                     ) : (
@@ -291,19 +363,32 @@ const PlaceManager: React.FC<PlaceManagerProps> = ({
                       </div>
                     )}
                     
-                    {/* Add Menu Item Button */}
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="w-full mt-2"
-                      onClick={() => handleOpenAddMenuDialog(place.id)}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Menu Item
-                    </Button>
+                    <div className="flex space-x-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={() => handleOpenAddMenuDialog(place.id)}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Item
+                      </Button>
+                      
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={() => {
+                          setSelectedPlaceId(place.id);
+                          setShowMenuScanner(true);
+                        }}
+                      >
+                        <Camera className="h-4 w-4 mr-2" />
+                        Scan Menu
+                      </Button>
+                    </div>
                   </div>
                   
-                  {/* Place Actions */}
                   <div className="flex justify-between pt-2 border-t">
                     {onSelectPlace && (
                       <Button 

@@ -58,6 +58,7 @@ export interface Place {
   id: string;
   name: string;
   menu: MenuItem[];
+  initialContribution?: number; // Amount collected for group expenses
 }
 
 export interface FriendGroup {

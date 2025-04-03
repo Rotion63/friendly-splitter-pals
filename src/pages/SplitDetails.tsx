@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
-import { Bill, BillItem, PartialPayment, MenuItem } from "@/lib/types";
+import { Bill, BillItem, PartialPayment, MenuItem, Participant } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { generateId } from "@/lib/utils";
@@ -13,9 +13,10 @@ import PartialPaymentManager from "@/components/SplitBill/PartialPaymentManager"
 import DiscountInput from "@/components/SplitBill/DiscountInput";
 import BillScanner from "@/components/SplitBill/BillScanner";
 import MenuSelector from "@/components/SplitBill/MenuSelector";
+import AddParticipant from "@/components/SplitBill/AddParticipant";
 import { createEmptyBill, getBillById, saveBill } from "@/lib/billStorage";
 import { formatCurrency } from "@/lib/utils";
-import { Camera, Receipt, Plus, ArrowUp } from "lucide-react";
+import { Camera, Receipt, Plus, ArrowUp, Users } from "lucide-react";
 
 const SplitDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -35,7 +36,7 @@ const SplitDetails: React.FC = () => {
   const [useRateQuantity, setUseRateQuantity] = useState(false);
   const [activeTab, setActiveTab] = useState("manual");
   const [showBillScanner, setShowBillScanner] = useState(false);
-  
+  const [showParticipantManager, setShowParticipantManager] = useState(false);
   const tripId = new URLSearchParams(location.search).get('tripId');
   
   useEffect(() => {
@@ -269,6 +270,60 @@ const SplitDetails: React.FC = () => {
     }
   };
   
+  const handleAddParticipant = (participant: Participant) => {
+    if (!bill) return;
+    
+    if (bill.participants.some(p => p.id === participant.id)) {
+      toast.error(`${participant.name} is already in this bill`);
+      return;
+    }
+    
+    const updatedBill = {
+      ...bill,
+      participants: [...bill.participants, participant]
+    };
+    
+    setBill(updatedBill);
+    saveBill(updatedBill);
+    toast.success(`${participant.name} added to this bill`);
+  };
+  
+  const handleRemoveParticipant = (id: string) => {
+    if (!bill) return;
+    
+    const isParticipantInItems = bill.items.some(item => 
+      item.participants.includes(id)
+    );
+    
+    if (isParticipantInItems) {
+      toast.error("Cannot remove participant who is part of bill items");
+      return;
+    }
+    
+    if (bill.paidBy === id) {
+      toast.error("Cannot remove participant who paid for the bill");
+      return;
+    }
+    
+    const hasPartialPayment = bill.partialPayments?.some(
+      payment => payment.payerId === id
+    );
+    
+    if (hasPartialPayment) {
+      toast.error("Cannot remove participant who has made payments");
+      return;
+    }
+    
+    const updatedBill = {
+      ...bill,
+      participants: bill.participants.filter(p => p.id !== id)
+    };
+    
+    setBill(updatedBill);
+    saveBill(updatedBill);
+    toast.success("Participant removed");
+  };
+  
   if (!bill) {
     return (
       <AppLayout showBackButton title="Loading...">
@@ -302,6 +357,39 @@ const SplitDetails: React.FC = () => {
       )}
       
       <div className="py-6">
+        <div className="glass-panel rounded-xl p-4 mb-6">
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-lg font-medium">Participants</h2>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => setShowParticipantManager(!showParticipantManager)}
+            >
+              <Users className="h-4 w-4 mr-2" />
+              {showParticipantManager ? "Hide" : "Manage"}
+            </Button>
+          </div>
+          
+          {!showParticipantManager ? (
+            <div className="flex flex-wrap gap-2">
+              {bill.participants.map(participant => (
+                <div 
+                  key={participant.id}
+                  className="bg-muted px-3 py-1 rounded-full text-sm"
+                >
+                  {participant.name}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <AddParticipant
+              participants={bill.participants}
+              onAdd={handleAddParticipant}
+              onRemove={handleRemoveParticipant}
+            />
+          )}
+        </div>
+        
         <div className="glass-panel rounded-xl p-4 mb-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-medium">Bill Items</h2>
