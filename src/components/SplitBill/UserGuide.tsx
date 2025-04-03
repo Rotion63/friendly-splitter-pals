@@ -1,7 +1,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { X, ArrowRight, PlusCircle, Users, Receipt, Calculator, Camera, Scan, Upload } from "lucide-react";
+import { X, ArrowRight, PlusCircle, Users, Receipt, Calculator, Camera, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface UserGuideProps {

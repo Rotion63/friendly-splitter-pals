@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { Camera, Upload, Scanner, X } from "lucide-react";
+import { Camera, Upload, Receipt, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -114,7 +114,7 @@ const BillScanner: React.FC<BillScannerProps> = ({
           ) : (
             <div className="rounded-md border-2 border-dashed border-muted-foreground/20 p-8 text-center space-y-4">
               <div className="flex justify-center">
-                <Scanner className="h-10 w-10 text-muted-foreground" />
+                <Receipt className="h-10 w-10 text-muted-foreground" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground mb-1">
