@@ -1,7 +1,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { X, ArrowRight, PlusCircle, Users, Receipt, Calculator, DollarSign } from "lucide-react";
+import { X, ArrowRight, PlusCircle, Users, Receipt, Calculator, Camera, Scan, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface UserGuideProps {
@@ -21,14 +21,14 @@ const UserGuide: React.FC<UserGuideProps> = ({ onDismiss = () => {} }) => {
       icon: <PlusCircle className="h-7 w-7" />
     },
     {
-      title: "Add Items",
-      description: "Add all items that need to be split",
-      icon: <Receipt className="h-7 w-7" />
+      title: "Scan Receipt",
+      description: "Scan or upload a receipt to auto-fill items",
+      icon: <Camera className="h-7 w-7" />
     },
     {
-      title: "Calculate",
-      description: "See who owes what instantly",
-      icon: <Calculator className="h-7 w-7" />
+      title: "Use Menus",
+      description: "Select items from saved restaurant menus",
+      icon: <Receipt className="h-7 w-7" />
     }
   ];
   

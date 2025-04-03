@@ -1,17 +1,22 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
-import { Bill, BillItem, PartialPayment } from "@/lib/types";
+import { Bill, BillItem, PartialPayment, MenuItem } from "@/lib/types";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { generateId } from "@/lib/utils";
 import BillItemList from "@/components/SplitBill/BillItemList";
 import AddBillItem from "@/components/SplitBill/AddBillItem";
 import PaidBySelector from "@/components/SplitBill/PaidBySelector";
 import PartialPaymentManager from "@/components/SplitBill/PartialPaymentManager";
 import DiscountInput from "@/components/SplitBill/DiscountInput";
+import BillScanner from "@/components/SplitBill/BillScanner";
+import MenuSelector from "@/components/SplitBill/MenuSelector";
 import { createEmptyBill, getBillById, saveBill } from "@/lib/billStorage";
 import { formatCurrency } from "@/lib/utils";
+import { Camera, Receipt, Plus } from "lucide-react";
 
 const SplitDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -28,6 +33,8 @@ const SplitDetails: React.FC = () => {
   const [newItemRate, setNewItemRate] = useState("");
   const [newItemQuantity, setNewItemQuantity] = useState("1");
   const [useRateQuantity, setUseRateQuantity] = useState(false);
+  const [activeTab, setActiveTab] = useState("manual");
+  const [showBillScanner, setShowBillScanner] = useState(false);
   
   useEffect(() => {
     if (!id) {
@@ -198,6 +205,54 @@ const SplitDetails: React.FC = () => {
     }
   };
   
+  const handleBillScanned = (items: { name: string; amount: number }[]) => {
+    if (!bill) return;
+    
+    let newTotalAmount = bill.totalAmount;
+    const newItems = [...bill.items];
+    
+    items.forEach(item => {
+      const newItem: BillItem = {
+        id: generateId("item-"),
+        name: item.name,
+        amount: item.amount,
+        participants: bill.participants.map(p => p.id) // Default to all participants
+      };
+      
+      newItems.push(newItem);
+      newTotalAmount += item.amount;
+    });
+    
+    const updatedBill = {
+      ...bill,
+      items: newItems,
+      totalAmount: newTotalAmount
+    };
+    
+    setBill(updatedBill);
+    saveBill(updatedBill);
+  };
+  
+  const handleMenuItemSelected = (menuItem: MenuItem) => {
+    if (!bill) return;
+    
+    const newItem: BillItem = {
+      id: generateId("item-"),
+      name: menuItem.name,
+      amount: menuItem.price,
+      participants: bill.participants.map(p => p.id) // Default to all participants
+    };
+    
+    const updatedBill = {
+      ...bill,
+      items: [...bill.items, newItem],
+      totalAmount: bill.totalAmount + menuItem.price
+    };
+    
+    setBill(updatedBill);
+    saveBill(updatedBill);
+  };
+  
   if (!bill) {
     return (
       <AppLayout showBackButton title="Loading...">
@@ -230,25 +285,62 @@ const SplitDetails: React.FC = () => {
             onRemoveItem={handleRemoveItem} 
           />
           
-          <AddBillItem 
-            isAdding={isAddingItem}
-            participants={bill.participants}
-            newItemName={newItemName}
-            newItemAmount={newItemAmount}
-            newItemParticipants={newItemParticipants}
-            onNewItemNameChange={setNewItemName}
-            onNewItemAmountChange={setNewItemAmount}
-            onParticipantToggle={handleParticipantToggle}
-            onSelectAll={handleSelectAll}
-            onAdd={handleAddItem}
-            onCancel={() => setIsAddingItem(!isAddingItem)}
-            newItemRate={newItemRate}
-            newItemQuantity={newItemQuantity}
-            onNewItemRateChange={setNewItemRate}
-            onNewItemQuantityChange={setNewItemQuantity}
-            useRateQuantity={useRateQuantity}
-            onToggleRateQuantity={handleToggleRateQuantity}
-          />
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="manual">Manual</TabsTrigger>
+              <TabsTrigger value="scan">Scan Receipt</TabsTrigger>
+              <TabsTrigger value="menu">Menu</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="manual">
+              <AddBillItem 
+                isAdding={isAddingItem}
+                participants={bill.participants}
+                newItemName={newItemName}
+                newItemAmount={newItemAmount}
+                newItemParticipants={newItemParticipants}
+                onNewItemNameChange={setNewItemName}
+                onNewItemAmountChange={setNewItemAmount}
+                onParticipantToggle={handleParticipantToggle}
+                onSelectAll={handleSelectAll}
+                onAdd={handleAddItem}
+                onCancel={() => setIsAddingItem(!isAddingItem)}
+                newItemRate={newItemRate}
+                newItemQuantity={newItemQuantity}
+                onNewItemRateChange={setNewItemRate}
+                onNewItemQuantityChange={setNewItemQuantity}
+                useRateQuantity={useRateQuantity}
+                onToggleRateQuantity={handleToggleRateQuantity}
+              />
+            </TabsContent>
+            
+            <TabsContent value="scan">
+              <div className="p-4 border rounded-md mt-3">
+                <Button 
+                  variant="outline" 
+                  className="w-full py-6 flex items-center justify-center gap-2"
+                  onClick={() => setShowBillScanner(true)}
+                >
+                  <Camera className="h-5 w-5" />
+                  Scan or Upload Receipt
+                </Button>
+                <p className="text-xs text-muted-foreground text-center mt-2">
+                  Use OCR to automatically extract items from your receipt
+                </p>
+              </div>
+              <BillScanner 
+                isOpen={showBillScanner}
+                onClose={() => setShowBillScanner(false)}
+                onBillProcessed={handleBillScanned}
+              />
+            </TabsContent>
+            
+            <TabsContent value="menu">
+              <div className="mt-3">
+                <MenuSelector onMenuItemSelected={handleMenuItemSelected} />
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
         
         <DiscountInput 

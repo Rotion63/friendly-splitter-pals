@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -56,7 +57,7 @@ const HomePage: React.FC = () => {
   };
 
   const handleViewBill = (billId: string) => {
-    navigate(`/split/${billId}`);
+    navigate(`/split-details/${billId}`);
   };
 
   const handleEditBill = (billId: string) => {
@@ -113,13 +114,16 @@ const HomePage: React.FC = () => {
           
           <TabsContent value="active" className="mt-4">
             <AnimatePresence>
+              {showGuide && <UserGuide onDismiss={handleCloseGuide} />}
+              
               {activeBills.length === 0 ? (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
+                  className="text-center py-8 text-muted-foreground"
                 >
-                  {showGuide && <UserGuide onDismiss={handleCloseGuide} />}
+                  <p>No active bills yet. Create your first bill!</p>
                 </motion.div>
               ) : (
                 <motion.div
