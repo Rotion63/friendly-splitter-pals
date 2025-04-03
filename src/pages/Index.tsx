@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -24,16 +23,13 @@ const HomePage: React.FC = () => {
   const [showGuide, setShowGuide] = useState(true);
 
   useEffect(() => {
-    // Load bills
     const loadedBills = getBills();
     setBills(loadedBills);
 
-    // Separate active and settled bills
     const active: Bill[] = [];
     const settled: Bill[] = [];
 
     loadedBills.forEach(bill => {
-      // Check if all settlements are marked as settled
       const isFullySettled = bill.settlements?.every(settlement => settlement.settled) ?? false;
       
       if (isFullySettled && bill.settlements && bill.settlements.length > 0) {
@@ -46,7 +42,6 @@ const HomePage: React.FC = () => {
     setActiveBills(active);
     setSettledBills(settled);
 
-    // Load friends
     setFriends(getFriends());
   }, []);
 
@@ -61,7 +56,7 @@ const HomePage: React.FC = () => {
   };
 
   const handleViewBill = (billId: string) => {
-    navigate(`/split-summary/${billId}`);
+    navigate(`/split/${billId}`);
   };
 
   const handleEditBill = (billId: string) => {
@@ -138,8 +133,8 @@ const HomePage: React.FC = () => {
                       key={bill.id}
                       bill={bill}
                       index={index}
-                      onClick={handleViewBill}
-                      onEdit={handleEditBill}
+                      onClick={() => handleViewBill(bill.id)}
+                      onEdit={() => handleEditBill(bill.id)}
                     />
                   ))}
                 </motion.div>
@@ -170,8 +165,8 @@ const HomePage: React.FC = () => {
                       key={bill.id}
                       bill={bill}
                       index={index}
-                      onClick={handleViewBill}
-                      onEdit={handleEditBill}
+                      onClick={() => handleViewBill(bill.id)}
+                      onEdit={() => handleEditBill(bill.id)}
                       settled={true}
                     />
                   ))}

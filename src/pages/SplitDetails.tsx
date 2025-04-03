@@ -191,6 +191,12 @@ const SplitDetails: React.FC = () => {
     saveBill(updatedBill);
     navigate(`/split-summary/${bill.id}`);
   };
+
+  const handleViewSummary = () => {
+    if (bill) {
+      navigate(`/split-summary/${bill.id}`);
+    }
+  };
   
   if (!bill) {
     return (
@@ -209,7 +215,7 @@ const SplitDetails: React.FC = () => {
   const remainingAmount = bill.totalAmount - totalPaid - discount;
   
   return (
-    <AppLayout showBackButton title={bill.title}>
+    <AppLayout showBackButton title={bill?.title || "Loading..."}>
       <div className="py-6">
         <div className="glass-panel rounded-xl p-4 mb-6">
           <div className="flex justify-between items-center mb-4">
@@ -294,13 +300,24 @@ const SplitDetails: React.FC = () => {
           />
         )}
         
-        <Button 
-          className="w-full py-6 text-lg"
-          onClick={handleCalculateSplit}
-          disabled={bill.items.length === 0}
-        >
-          Calculate Split
-        </Button>
+        <div className="flex space-x-2 mt-6">
+          <Button 
+            className="flex-1 py-6"
+            onClick={handleCalculateSplit}
+            disabled={bill?.items.length === 0}
+          >
+            Calculate Split
+          </Button>
+          
+          <Button 
+            className="flex-1 py-6"
+            variant="outline"
+            onClick={handleViewSummary}
+            disabled={bill?.items.length === 0}
+          >
+            View Summary
+          </Button>
+        </div>
       </div>
     </AppLayout>
   );

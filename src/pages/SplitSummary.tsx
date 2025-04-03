@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
 import { calculateSplits, formatCurrency } from "@/lib/utils";
 import { Bill, Settlement } from "@/lib/types";
-import { ArrowDown, ArrowUp, User, Receipt, Percent, Wallet, CheckCircle2 } from "lucide-react";
+import { ArrowDown, ArrowUp, User, Receipt, Percent, Wallet, CheckCircle2, Edit2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { getBillById, saveBill } from "@/lib/billStorage";
@@ -53,6 +53,12 @@ const SplitSummary: React.FC = () => {
     setBill(updatedBill);
     // Recalculate splits if needed
     setSplits(calculateSplits(updatedBill));
+  };
+  
+  const handleEditBill = () => {
+    if (bill) {
+      navigate(`/split-details/${bill.id}`);
+    }
   };
   
   if (!bill) {
@@ -282,6 +288,14 @@ const SplitSummary: React.FC = () => {
               Paid by {paidByPerson.name}
             </p>
           ) : null}
+
+          <Button 
+            onClick={handleEditBill}
+            variant="outline"
+            className="mt-4 w-full"
+          >
+            <Edit2 className="h-4 w-4 mr-2" /> Edit Bill
+          </Button>
         </motion.div>
         
         {/* Tabbed Interface for better organization */}
