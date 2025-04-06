@@ -40,6 +40,13 @@ export function getActiveCurrency(): Currency {
   return activeCurrency;
 }
 
+// Add formatAmount function that BillCard is trying to use
+export function formatAmount(amount: number, currency?: Currency): string {
+  const currencyToUse = currency || getActiveCurrency();
+  return `${currencyToUse.symbol} ${amount.toFixed(2)}`;
+}
+
+// Keep the existing formatCurrency for backward compatibility
 export function formatCurrency(amount: number): string {
   const currency = getActiveCurrency();
   return `${currency.symbol} ${amount.toFixed(2)}`;

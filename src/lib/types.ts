@@ -47,6 +47,7 @@ export interface Bill {
   settlements?: Settlement[]; // Track who has settled with whom
   isDummy?: boolean; // Flag to identify dummy bills
   tripId?: string; // Link to a trip if applicable
+  place?: string; // Adding place property to fix the error
 }
 
 export interface MenuItem {

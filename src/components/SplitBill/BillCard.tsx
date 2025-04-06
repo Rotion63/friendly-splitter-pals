@@ -44,7 +44,7 @@ const BillCard: React.FC<BillCardProps> = ({
   const calculateTotalAmount = () => {
     let total = 0;
     if (bill.items) {
-      total = bill.items.reduce((sum, item) => sum + item.price, 0);
+      total = bill.items.reduce((sum, item) => sum + item.amount, 0);
     }
     return total;
   };

@@ -1,4 +1,5 @@
-import { Bill, Participant } from "./types";
+
+import { Bill, Participant, BillItem } from "./types";
 import { v4 as uuidv4 } from 'uuid';
 
 export const getBills = (): Bill[] => {
@@ -17,7 +18,7 @@ export const updateBill = (bill: Bill): void => {
   localStorage.setItem('bills', JSON.stringify(updatedBills));
 };
 
-export const getBill = (id: string): Bill | undefined => {
+export const getBillById = (id: string): Bill | undefined => {
   const bills = getBills();
   return bills.find(bill => bill.id === id);
 };
@@ -29,8 +30,36 @@ export const deleteBill = (id: string) => {
   return updatedBills;
 };
 
+// Function to remove bills with a different name to align with existing imports
+export const removeBill = (id: string) => {
+  return deleteBill(id);
+};
+
+// Function to get bills by trip ID
+export const getBillsByTripId = (tripId: string): Bill[] => {
+  const bills = getBills();
+  return bills.filter(bill => bill.tripId === tripId);
+};
+
 export const generateId = (): string => {
   return uuidv4();
+};
+
+// Function to create an empty bill
+export const createEmptyBill = (
+  title: string, 
+  participants: Participant[], 
+  tripId?: string
+): Bill => {
+  return {
+    id: generateId(),
+    title,
+    date: new Date().toISOString(),
+    totalAmount: 0,
+    participants: [...participants],
+    items: [],
+    tripId,
+  };
 };
 
 // Friends Storage
