@@ -1,14 +1,17 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { X, ArrowRight, PlusCircle, Users, Receipt, Calculator, Camera, Upload } from "lucide-react";
+import { X, ArrowRight, PlusCircle, Users, Receipt, Calculator, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface UserGuideProps {
   onDismiss?: () => void;
 }
 
 const UserGuide: React.FC<UserGuideProps> = ({ onDismiss = () => {} }) => {
+  const isMobile = useIsMobile();
+  
   const steps = [
     {
       title: "Add Friends",
@@ -36,10 +39,10 @@ const UserGuide: React.FC<UserGuideProps> = ({ onDismiss = () => {} }) => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-5 mb-6"
+      className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-4 mb-6"
     >
       <div className="flex justify-between items-start mb-4">
-        <h3 className="text-xl font-bold text-primary">How to use</h3>
+        <h3 className="text-xl font-bold text-primary">How to Use</h3>
         <Button
           variant="ghost"
           size="icon"
@@ -50,7 +53,7 @@ const UserGuide: React.FC<UserGuideProps> = ({ onDismiss = () => {} }) => {
         </Button>
       </div>
       
-      <div className="grid grid-cols-2 gap-4 mb-4">
+      <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-4 mb-4`}>
         {steps.map((step, index) => (
           <motion.div
             key={index}

@@ -1,85 +1,51 @@
+import { Bill, Participant } from "./types";
+import { v4 as uuidv4 } from 'uuid';
 
-import { Bill } from "./types";
-import { generateId } from "./utils";
-import { addBillToTrip, removeBillFromTrip } from "./tripStorage";
-
-const BILLS_STORAGE_KEY = "splitBills";
-
-// Get all bills from storage
 export const getBills = (): Bill[] => {
-  const storedBills = localStorage.getItem(BILLS_STORAGE_KEY);
-  return storedBills ? JSON.parse(storedBills) : [];
+  const billsString = localStorage.getItem('bills');
+  return billsString ? JSON.parse(billsString) : [];
 };
 
-// Get bills for a specific trip
-export const getBillsByTripId = (tripId: string): Bill[] => {
-  return getBills().filter(bill => bill.tripId === tripId);
-};
-
-// Get a specific bill by ID
-export const getBillById = (id: string): Bill | null => {
-  const bills = getBills();
-  return bills.find(bill => bill.id === id) || null;
-};
-
-// Save a bill (creates new or updates existing)
 export const saveBill = (bill: Bill): void => {
   const bills = getBills();
-  const existingBillIndex = bills.findIndex(b => b.id === bill.id);
-  
-  if (existingBillIndex >= 0) {
-    // Preserve existing partial payments if not provided in the new bill
-    if (!bill.partialPayments && bills[existingBillIndex].partialPayments) {
-      bill.partialPayments = bills[existingBillIndex].partialPayments;
-    }
-    
-    // Preserve existing settlements if not provided in the new bill
-    if (!bill.settlements && bills[existingBillIndex].settlements) {
-      bill.settlements = bills[existingBillIndex].settlements;
-    }
-    
-    // Update the bill
-    bills[existingBillIndex] = bill;
-  } else {
-    bills.push(bill);
-    
-    // If the bill is associated with a trip, update the trip as well
-    if (bill.tripId) {
-      addBillToTrip(bill.tripId, bill.id);
-    }
-  }
-  
-  localStorage.setItem(BILLS_STORAGE_KEY, JSON.stringify(bills));
+  localStorage.setItem('bills', JSON.stringify([...bills, bill]));
 };
 
-// Remove a bill by ID
-export const removeBill = (id: string): void => {
+export const updateBill = (bill: Bill): void => {
   const bills = getBills();
-  const billToRemove = bills.find(bill => bill.id === id);
-  
-  if (billToRemove && billToRemove.tripId) {
-    // If the bill belongs to a trip, remove it from the trip too
-    removeBillFromTrip(billToRemove.tripId, id);
-  }
-  
-  const updatedBills = bills.filter(bill => bill.id !== id);
-  localStorage.setItem(BILLS_STORAGE_KEY, JSON.stringify(updatedBills));
+  const updatedBills = bills.map(b => b.id === bill.id ? bill : b);
+  localStorage.setItem('bills', JSON.stringify(updatedBills));
 };
 
-// Create an empty bill with just the title and participants
-export const createEmptyBill = (
-  title: string, 
-  participants: Bill["participants"], 
-  tripId?: string
-): Bill => {
-  return {
-    id: generateId("bill-"),
-    title: title.trim(),
-    date: new Date().toISOString(),
-    totalAmount: 0,
-    participants,
-    items: [],
-    paidBy: participants[0]?.id || "",
-    tripId, // Associate with a trip if provided
-  };
+export const getBill = (id: string): Bill | undefined => {
+  const bills = getBills();
+  return bills.find(bill => bill.id === id);
+};
+
+export const deleteBill = (id: string) => {
+  const bills = getBills();
+  const updatedBills = bills.filter(bill => bill.id !== id);
+  localStorage.setItem('bills', JSON.stringify(updatedBills));
+  return updatedBills;
+};
+
+export const generateId = (): string => {
+  return uuidv4();
+};
+
+// Friends Storage
+export const getFriends = (): Participant[] => {
+  const friendsString = localStorage.getItem('friends');
+  return friendsString ? JSON.parse(friendsString) : [];
+};
+
+export const saveFriend = (friend: Participant): void => {
+  const friends = getFriends();
+  localStorage.setItem('friends', JSON.stringify([...friends, friend]));
+};
+
+export const removeFriend = (id: string): void => {
+  const friends = getFriends();
+  const updatedFriends = friends.filter(friend => friend.id !== id);
+  localStorage.setItem('friends', JSON.stringify(updatedFriends));
 };
