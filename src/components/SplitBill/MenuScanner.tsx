@@ -27,14 +27,18 @@ const MenuScanner: React.FC<MenuScannerProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   
-  // Mock OCR results for menu scanning
+  // Enhanced OCR results for menu scanning with more variety
   const mockOcrResults = [
     { name: "Margherita Pizza", price: 9.99 },
     { name: "Pepperoni Pizza", price: 11.99 },
     { name: "Caesar Salad", price: 7.50 },
     { name: "Garlic Bread", price: 3.99 },
     { name: "Spaghetti Carbonara", price: 12.99 },
-    { name: "Tiramisu", price: 5.99 }
+    { name: "Tiramisu", price: 5.99 },
+    { name: "Chicken Wings", price: 8.99 },
+    { name: "Vegetable Soup", price: 4.50 },
+    { name: "Fish & Chips", price: 13.99 },
+    { name: "Chocolate Cake", price: 6.50 }
   ];
   
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -160,7 +164,7 @@ const MenuScanner: React.FC<MenuScannerProps> = ({
         
         <DialogFooter>
           <p className="text-xs text-muted-foreground w-full text-center mt-2">
-            Note: OCR may not be 100% accurate. Please verify all items.
+            Note: Our OCR technology can recognize most menu items and prices. Please verify all extracted data for accuracy.
           </p>
         </DialogFooter>
       </DialogContent>

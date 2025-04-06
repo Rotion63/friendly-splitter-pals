@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { toast } from "sonner";
@@ -13,8 +14,10 @@ import PartialPaymentManager from "@/components/SplitBill/PartialPaymentManager"
 import DiscountInput from "@/components/SplitBill/DiscountInput";
 import BillScanner from "@/components/SplitBill/BillScanner";
 import MenuSelector from "@/components/SplitBill/MenuSelector";
+import MenuScanner from "@/components/SplitBill/MenuScanner";
 import AddParticipant from "@/components/SplitBill/AddParticipant";
-import { createEmptyBill, getBillById, saveBill } from "@/lib/billStorage";
+import DeleteBillButton from "@/components/SplitBill/DeleteBillButton";
+import { createEmptyBill, getBillById, saveBill, removeBill } from "@/lib/billStorage";
 import { formatCurrency } from "@/lib/utils";
 import { Camera, Receipt, Plus, ArrowUp, Users } from "lucide-react";
 
@@ -36,6 +39,7 @@ const SplitDetails: React.FC = () => {
   const [useRateQuantity, setUseRateQuantity] = useState(false);
   const [activeTab, setActiveTab] = useState("manual");
   const [showBillScanner, setShowBillScanner] = useState(false);
+  const [showMenuScanner, setShowMenuScanner] = useState(false);
   const [showParticipantManager, setShowParticipantManager] = useState(false);
   const tripId = new URLSearchParams(location.search).get('tripId');
   
@@ -216,6 +220,19 @@ const SplitDetails: React.FC = () => {
     }
   };
   
+  const handleDeleteBill = () => {
+    if (!bill) return;
+    
+    removeBill(bill.id);
+    toast.success("Bill deleted successfully");
+    
+    if (bill.tripId) {
+      navigate(`/trip/${bill.tripId}`);
+    } else {
+      navigate("/");
+    }
+  };
+  
   const handleBillScanned = (items: { name: string; amount: number }[]) => {
     if (!bill) return;
     
@@ -242,6 +259,35 @@ const SplitDetails: React.FC = () => {
     
     setBill(updatedBill);
     saveBill(updatedBill);
+  };
+  
+  const handleMenuScanned = (items: { name: string; price: number }[]) => {
+    if (!bill) return;
+    
+    let newTotalAmount = bill.totalAmount;
+    const newItems = [...bill.items];
+    
+    items.forEach(item => {
+      const newItem: BillItem = {
+        id: generateId("item-"),
+        name: item.name,
+        amount: item.price,
+        participants: bill.participants.map(p => p.id) // Default to all participants
+      };
+      
+      newItems.push(newItem);
+      newTotalAmount += item.price;
+    });
+    
+    const updatedBill = {
+      ...bill,
+      items: newItems,
+      totalAmount: newTotalAmount
+    };
+    
+    setBill(updatedBill);
+    saveBill(updatedBill);
+    toast.success(`Added ${items.length} items from the menu`);
   };
   
   const handleMenuItemSelected = (menuItem: MenuItem) => {
@@ -342,8 +388,8 @@ const SplitDetails: React.FC = () => {
   
   return (
     <AppLayout showBackButton title={bill?.title || "Loading..."}>
-      {bill.tripId && (
-        <div className="pt-2">
+      <div className="flex justify-between items-center pt-2">
+        {bill.tripId ? (
           <Button 
             variant="ghost" 
             size="sm" 
@@ -353,8 +399,16 @@ const SplitDetails: React.FC = () => {
             <ArrowUp className="h-3 w-3 mr-1 rotate-315" />
             Back to trip
           </Button>
-        </div>
-      )}
+        ) : (
+          <div></div>
+        )}
+        
+        <DeleteBillButton 
+          onDelete={handleDeleteBill} 
+          buttonText="Delete Bill" 
+          variant="ghost"
+        />
+      </div>
       
       <div className="py-6">
         <div className="glass-panel rounded-xl p-4 mb-6">
@@ -434,22 +488,37 @@ const SplitDetails: React.FC = () => {
             
             <TabsContent value="scan">
               <div className="p-4 border rounded-md mt-3">
-                <Button 
-                  variant="outline" 
-                  className="w-full py-6 flex items-center justify-center gap-2"
-                  onClick={() => setShowBillScanner(true)}
-                >
-                  <Camera className="h-5 w-5" />
-                  Scan or Upload Receipt
-                </Button>
+                <div className="flex space-x-2">
+                  <Button 
+                    variant="outline" 
+                    className="w-full py-6 flex items-center justify-center gap-2"
+                    onClick={() => setShowBillScanner(true)}
+                  >
+                    <Receipt className="h-5 w-5" />
+                    Scan Receipt
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full py-6 flex items-center justify-center gap-2"
+                    onClick={() => setShowMenuScanner(true)}
+                  >
+                    <Camera className="h-5 w-5" />
+                    Scan Menu
+                  </Button>
+                </div>
                 <p className="text-xs text-muted-foreground text-center mt-2">
-                  Use OCR to automatically extract items from your receipt
+                  Use OCR to automatically extract items from receipts or menus
                 </p>
               </div>
               <BillScanner 
                 isOpen={showBillScanner}
                 onClose={() => setShowBillScanner(false)}
                 onBillProcessed={handleBillScanned}
+              />
+              <MenuScanner
+                isOpen={showMenuScanner}
+                onClose={() => setShowMenuScanner(false)}
+                onMenuProcessed={handleMenuScanned}
               />
             </TabsContent>
             

@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { getTripById, saveTrip } from "@/lib/tripStorage";
-import { getBillsByTripId, createEmptyBill, saveBill } from "@/lib/billStorage";
+import { getBillsByTripId, createEmptyBill, saveBill, removeBill } from "@/lib/billStorage";
 import { Trip, Bill, Participant } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -13,11 +13,13 @@ import {
   Receipt, 
   Plus, 
   Edit2, 
-  ArrowRight,
-  Trash2
+  ArrowRight
 } from "lucide-react";
 import { toast } from "sonner";
 import ParticipantBalances from "@/components/SplitBill/ParticipantBalances";
+import DeleteBillButton from "@/components/SplitBill/DeleteBillButton";
+import InitialContributionManager from "@/components/SplitBill/InitialContributionManager";
+import MenuScanner from "@/components/SplitBill/MenuScanner";
 
 const TripDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -26,6 +28,7 @@ const TripDetails: React.FC = () => {
   const [bills, setBills] = useState<Bill[]>([]);
   const [isAddingBill, setIsAddingBill] = useState(false);
   const [newBillTitle, setNewBillTitle] = useState("");
+  const [showMenuScanner, setShowMenuScanner] = useState(false);
   
   useEffect(() => {
     if (!id) {
@@ -75,6 +78,12 @@ const TripDetails: React.FC = () => {
     navigate(`/split-details/${billId}`);
   };
   
+  const handleDeleteBill = (billId: string) => {
+    removeBill(billId);
+    setBills(bills.filter(bill => bill.id !== billId));
+    toast.success("Bill deleted successfully");
+  };
+  
   const calculateTotalSpent = (): number => {
     return bills.reduce((total, bill) => total + bill.totalAmount, 0);
   };
@@ -90,6 +99,49 @@ const TripDetails: React.FC = () => {
     setTrip(updatedTrip);
     saveTrip(updatedTrip);
     toast.success("Balance updated");
+  };
+  
+  const handleParticipantsUpdate = (updatedParticipants: Participant[]) => {
+    if (!trip) return;
+    
+    const updatedTrip = { ...trip, participants: updatedParticipants };
+    setTrip(updatedTrip);
+    saveTrip(updatedTrip);
+    toast.success("Contributions updated");
+  };
+  
+  const handleMenuProcessed = (items: { name: string; price: number }[]) => {
+    if (!trip || !newBillTitle.trim() || items.length === 0) {
+      toast.error("Please enter a bill title first");
+      return;
+    }
+    
+    // Create new bill with scanned items
+    const newBill = createEmptyBill(newBillTitle, trip.participants, trip.id);
+    
+    let totalAmount = 0;
+    
+    // Add scanned items to bill
+    newBill.items = items.map(item => {
+      totalAmount += item.price;
+      
+      return {
+        id: generateId("item-"),
+        name: item.name,
+        amount: item.price,
+        participants: trip.participants.map(p => p.id) // Default to all participants
+      };
+    });
+    
+    newBill.totalAmount = totalAmount;
+    
+    saveBill(newBill);
+    setBills([...bills, newBill]);
+    setNewBillTitle("");
+    setIsAddingBill(false);
+    
+    toast.success("Bill created with scanned items");
+    navigate(`/split-details/${newBill.id}`);
   };
   
   if (!trip) {
@@ -152,6 +204,12 @@ const TripDetails: React.FC = () => {
           </div>
         </div>
         
+        {/* Initial Contributions */}
+        <InitialContributionManager 
+          participants={trip.participants}
+          onParticipantUpdate={handleParticipantsUpdate}
+        />
+        
         {/* Participant Balances */}
         <div className="glass-panel rounded-xl p-4">
           <ParticipantBalances 
@@ -193,6 +251,9 @@ const TripDetails: React.FC = () => {
                       >
                         <ArrowRight className="h-4 w-4" />
                       </Button>
+                      <DeleteBillButton
+                        onDelete={() => handleDeleteBill(bill.id)}
+                      />
                     </div>
                   </div>
                 </div>
@@ -219,6 +280,19 @@ const TripDetails: React.FC = () => {
                 <Button 
                   variant="outline" 
                   size="sm"
+                  onClick={() => {
+                    if (newBillTitle.trim()) {
+                      setShowMenuScanner(true);
+                    } else {
+                      toast.error("Please enter a bill title first");
+                    }
+                  }}
+                >
+                  Scan Menu
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
                   onClick={() => setIsAddingBill(false)}
                 >
                   Cancel
@@ -228,7 +302,7 @@ const TripDetails: React.FC = () => {
                   onClick={handleCreateBill}
                   disabled={!newBillTitle.trim()}
                 >
-                  Create
+                  Create Empty
                 </Button>
               </div>
             </div>
@@ -243,6 +317,12 @@ const TripDetails: React.FC = () => {
             </Button>
           )}
         </div>
+
+        <MenuScanner 
+          isOpen={showMenuScanner}
+          onClose={() => setShowMenuScanner(false)}
+          onMenuProcessed={handleMenuProcessed}
+        />
       </div>
     </AppLayout>
   );

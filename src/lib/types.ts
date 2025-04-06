@@ -4,6 +4,7 @@ export interface Participant {
   name: string;
   avatar?: string;
   balance?: number; // Track each participant's balance
+  initialContribution?: number; // Track each participant's initial contribution
 }
 
 export interface BillItem {

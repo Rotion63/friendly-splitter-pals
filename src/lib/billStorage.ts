@@ -1,7 +1,7 @@
 
 import { Bill } from "./types";
 import { generateId } from "./utils";
-import { addBillToTrip } from "./tripStorage";
+import { addBillToTrip, removeBillFromTrip } from "./tripStorage";
 
 const BILLS_STORAGE_KEY = "splitBills";
 
@@ -54,8 +54,16 @@ export const saveBill = (bill: Bill): void => {
 
 // Remove a bill by ID
 export const removeBill = (id: string): void => {
-  const bills = getBills().filter(bill => bill.id !== id);
-  localStorage.setItem(BILLS_STORAGE_KEY, JSON.stringify(bills));
+  const bills = getBills();
+  const billToRemove = bills.find(bill => bill.id === id);
+  
+  if (billToRemove && billToRemove.tripId) {
+    // If the bill belongs to a trip, remove it from the trip too
+    removeBillFromTrip(billToRemove.tripId, id);
+  }
+  
+  const updatedBills = bills.filter(bill => bill.id !== id);
+  localStorage.setItem(BILLS_STORAGE_KEY, JSON.stringify(updatedBills));
 };
 
 // Create an empty bill with just the title and participants

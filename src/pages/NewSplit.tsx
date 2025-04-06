@@ -1,15 +1,16 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
 import AddParticipant from "@/components/SplitBill/AddParticipant";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Participant, FriendGroup } from "@/lib/types";
+import { Participant, FriendGroup, BillItem } from "@/lib/types";
 import { getFriends } from "@/lib/friendsStorage";
-import { UserPlus, AlertCircle, Users } from "lucide-react";
+import { UserPlus, AlertCircle, Users, Camera, FileText } from "lucide-react";
 import { createEmptyBill, saveBill } from "@/lib/billStorage";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
@@ -21,7 +22,9 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import GroupManager from "@/components/SplitBill/GroupManager";
+import MenuScanner from "@/components/SplitBill/MenuScanner";
 import { getGroups } from "@/lib/groupsStorage";
+import { generateId } from "@/lib/utils";
 
 const NewSplit: React.FC = () => {
   const navigate = useNavigate();
@@ -31,6 +34,7 @@ const NewSplit: React.FC = () => {
   const [groups, setGroups] = useState<FriendGroup[]>([]);
   const [showAddFriends, setShowAddFriends] = useState(false);
   const [showAddGroup, setShowAddGroup] = useState(false);
+  const [showMenuScanner, setShowMenuScanner] = useState(false);
   
   useEffect(() => {
     const friendsList = getFriends();
@@ -94,10 +98,40 @@ const NewSplit: React.FC = () => {
     }
     
     const newBill = createEmptyBill(title, participants);
-    
     saveBill(newBill);
-    console.log("New bill created:", newBill);
     
+    navigate(`/split-details/${newBill.id}`);
+  };
+  
+  const handleMenuProcessed = (items: { name: string; price: number }[]) => {
+    if (!title.trim()) {
+      toast.error("Please enter a title for your split");
+      return;
+    }
+    
+    if (participants.length < 2) {
+      toast.error("You need at least 2 participants to split a bill");
+      return;
+    }
+    
+    const newBill = createEmptyBill(title, participants);
+    
+    let totalAmount = 0;
+    const newItems: BillItem[] = items.map(item => {
+      totalAmount += item.price;
+      return {
+        id: generateId("item-"),
+        name: item.name,
+        amount: item.price,
+        participants: participants.map(p => p.id)
+      };
+    });
+    
+    newBill.items = newItems;
+    newBill.totalAmount = totalAmount;
+    saveBill(newBill);
+    
+    toast.success(`Created bill with ${items.length} items from menu`);
     navigate(`/split-details/${newBill.id}`);
   };
   
@@ -164,18 +198,12 @@ const NewSplit: React.FC = () => {
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
-                    <DialogTitle>Manage Friends & Groups</DialogTitle>
+                    <DialogTitle>Manage Groups</DialogTitle>
                   </DialogHeader>
-                  <Tabs defaultValue="friends" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="friends">Friends</TabsTrigger>
+                  <Tabs defaultValue="groups" className="w-full">
+                    <TabsList className="grid w-full grid-cols-1">
                       <TabsTrigger value="groups">Groups</TabsTrigger>
                     </TabsList>
-                    <TabsContent value="friends" className="pt-4">
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Go to Home page to manage friends
-                      </p>
-                    </TabsContent>
                     <TabsContent value="groups" className="pt-4">
                       <GroupManager onSelectGroup={handleSelectGroup} />
                     </TabsContent>
@@ -259,14 +287,39 @@ const NewSplit: React.FC = () => {
             )}
           </div>
           
-          <Button 
-            type="submit" 
-            className="w-full py-6 text-lg"
-            disabled={!title.trim() || participants.length < 2}
-          >
-            Continue
-          </Button>
+          <div className="flex space-x-2 pt-4">
+            <Button 
+              type="submit" 
+              className="w-full py-6 text-lg"
+              disabled={!title.trim() || participants.length < 2}
+            >
+              Continue Manually
+            </Button>
+            
+            <Button 
+              type="button" 
+              variant="outline"
+              className="flex items-center gap-2"
+              onClick={() => {
+                if (!title.trim() || participants.length < 2) {
+                  toast.error("Please enter title and add at least 2 participants");
+                  return;
+                }
+                setShowMenuScanner(true);
+              }}
+              disabled={!title.trim() || participants.length < 2}
+            >
+              <Camera className="h-5 w-5" />
+              <FileText className="h-5 w-5" />
+            </Button>
+          </div>
         </motion.form>
+        
+        <MenuScanner 
+          isOpen={showMenuScanner}
+          onClose={() => setShowMenuScanner(false)}
+          onMenuProcessed={handleMenuProcessed}
+        />
       </div>
     </AppLayout>
   );
