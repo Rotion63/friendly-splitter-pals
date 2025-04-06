@@ -3,21 +3,18 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
-import FriendsList from "@/components/SplitBill/FriendsList";
 import BillCard from "@/components/SplitBill/BillCard";
 import NewSplitButton from "@/components/SplitBill/NewSplitButton";
 import UserGuide from "@/components/SplitBill/UserGuide";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Bill, Participant } from "@/lib/types";
+import { Bill } from "@/lib/types";
 import { getBills } from "@/lib/billStorage";
-import { getFriends, saveFriend, removeFriend } from "@/lib/friendsStorage";
 import { Button } from "@/components/ui/button";
-import { Edit, Settings, Users, MapPin } from "lucide-react";
+import { Settings, Users, MapPin } from "lucide-react";
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const [bills, setBills] = useState<Bill[]>([]);
-  const [friends, setFriends] = useState<Participant[]>([]);
   const [activeBills, setActiveBills] = useState<Bill[]>([]);
   const [settledBills, setSettledBills] = useState<Bill[]>([]);
   const [activeTab, setActiveTab] = useState("active");
@@ -42,19 +39,7 @@ const HomePage: React.FC = () => {
 
     setActiveBills(active);
     setSettledBills(settled);
-
-    setFriends(getFriends());
   }, []);
-
-  const handleAddFriend = (friend: Participant) => {
-    saveFriend(friend);
-    setFriends([...friends, friend]);
-  };
-
-  const handleRemoveFriend = (id: string) => {
-    removeFriend(id);
-    setFriends(friends.filter(f => f.id !== id));
-  };
 
   const handleViewBill = (billId: string) => {
     navigate(`/split-details/${billId}`);
@@ -85,12 +70,6 @@ const HomePage: React.FC = () => {
           </div>
         </div>
         
-        <FriendsList
-          friends={friends}
-          onAddFriend={handleAddFriend}
-          onRemoveFriend={handleRemoveFriend}
-        />
-
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-medium">Your Bills</h2>
           <div className="flex space-x-2">

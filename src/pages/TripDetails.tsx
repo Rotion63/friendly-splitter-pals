@@ -5,7 +5,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { getTripById, saveTrip } from "@/lib/tripStorage";
 import { getBillsByTripId, createEmptyBill, saveBill, removeBill } from "@/lib/billStorage";
 import { Trip, Bill, Participant } from "@/lib/types";
-import { formatCurrency, generateId } from "@/lib/utils"; // Added generateId import
+import { formatCurrency, generateId } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { 
   Calendar, 

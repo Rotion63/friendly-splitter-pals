@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Participant, FriendGroup, BillItem } from "@/lib/types";
 import { getFriends } from "@/lib/friendsStorage";
-import { UserPlus, AlertCircle, Users, Camera, FileText } from "lucide-react";
+import { UserPlus, AlertCircle, Users, Camera, FileText, Receipt } from "lucide-react";
 import { createEmptyBill, saveBill } from "@/lib/billStorage";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
@@ -290,16 +290,17 @@ const NewSplit: React.FC = () => {
           <div className="flex space-x-2 pt-4">
             <Button 
               type="submit" 
-              className="w-full py-6 text-lg"
+              className="flex-1 py-6 text-lg"
               disabled={!title.trim() || participants.length < 2}
             >
+              <FileText className="h-5 w-5 mr-2" />
               Continue Manually
             </Button>
             
             <Button 
               type="button" 
               variant="outline"
-              className="flex items-center gap-2"
+              className="flex-1 py-6 flex items-center justify-center gap-2"
               onClick={() => {
                 if (!title.trim() || participants.length < 2) {
                   toast.error("Please enter title and add at least 2 participants");
@@ -310,7 +311,7 @@ const NewSplit: React.FC = () => {
               disabled={!title.trim() || participants.length < 2}
             >
               <Camera className="h-5 w-5" />
-              <FileText className="h-5 w-5" />
+              Scan Menu
             </Button>
           </div>
         </motion.form>
