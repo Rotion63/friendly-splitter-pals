@@ -16,7 +16,7 @@ import MenuSelector from "@/components/SplitBill/MenuSelector";
 import MenuScanner from "@/components/SplitBill/MenuScanner";
 import AddParticipant from "@/components/SplitBill/AddParticipant";
 import DeleteBillButton from "@/components/SplitBill/DeleteBillButton";
-import { createEmptyBill, getBillById, saveBill, removeBill } from "@/lib/billStorage";
+import { createEmptyBill, getBillById, saveBill, removeBill, updateBill } from "@/lib/billStorage";
 import { formatCurrency } from "@/lib/utils";
 import { Camera, Receipt, Plus, ArrowUp, Users } from "lucide-react";
 
@@ -63,7 +63,7 @@ const SplitDetails: React.FC = () => {
       
       if (tripId && !foundBill.tripId) {
         const updatedBill = { ...foundBill, tripId };
-        saveBill(updatedBill);
+        updateBill(updatedBill);
         setBill(updatedBill);
       }
     } else {
@@ -107,7 +107,7 @@ const SplitDetails: React.FC = () => {
     };
     
     setBill(updatedBill);
-    saveBill(updatedBill);
+    updateBill(updatedBill);
     
     setNewItemName("");
     setNewItemAmount("");
@@ -130,7 +130,7 @@ const SplitDetails: React.FC = () => {
     };
     
     setBill(updatedBill);
-    saveBill(updatedBill);
+    updateBill(updatedBill);
   };
   
   const handleParticipantToggle = (participantId: string) => {
@@ -159,7 +159,7 @@ const SplitDetails: React.FC = () => {
         partialPayments: payments
       };
       setBill(updatedBill);
-      saveBill(updatedBill);
+      updateBill(updatedBill);
     }
   };
   
@@ -171,7 +171,7 @@ const SplitDetails: React.FC = () => {
         discount: discountAmount
       };
       setBill(updatedBill);
-      saveBill(updatedBill);
+      updateBill(updatedBill);
     }
   };
   
@@ -209,7 +209,7 @@ const SplitDetails: React.FC = () => {
       }
     }
     
-    saveBill(updatedBill);
+    updateBill(updatedBill);
     navigate(`/split-summary/${bill.id}`);
   };
 
@@ -243,7 +243,7 @@ const SplitDetails: React.FC = () => {
         id: generateId("item-"),
         name: item.name,
         amount: item.amount,
-        participants: bill.participants.map(p => p.id) // Default to all participants
+        participants: bill.participants.map(p => p.id)
       };
       
       newItems.push(newItem);
@@ -257,7 +257,7 @@ const SplitDetails: React.FC = () => {
     };
     
     setBill(updatedBill);
-    saveBill(updatedBill);
+    updateBill(updatedBill);
   };
   
   const handleMenuScanned = (items: { name: string; price: number }[]) => {
@@ -271,7 +271,7 @@ const SplitDetails: React.FC = () => {
         id: generateId("item-"),
         name: item.name,
         amount: item.price,
-        participants: bill.participants.map(p => p.id) // Default to all participants
+        participants: bill.participants.map(p => p.id)
       };
       
       newItems.push(newItem);
@@ -285,7 +285,7 @@ const SplitDetails: React.FC = () => {
     };
     
     setBill(updatedBill);
-    saveBill(updatedBill);
+    updateBill(updatedBill);
     toast.success(`Added ${items.length} items from the menu`);
   };
   
@@ -296,7 +296,7 @@ const SplitDetails: React.FC = () => {
       id: generateId("item-"),
       name: menuItem.name,
       amount: menuItem.price,
-      participants: bill.participants.map(p => p.id) // Default to all participants
+      participants: bill.participants.map(p => p.id)
     };
     
     const updatedBill = {
@@ -306,7 +306,7 @@ const SplitDetails: React.FC = () => {
     };
     
     setBill(updatedBill);
-    saveBill(updatedBill);
+    updateBill(updatedBill);
   };
   
   const handleBackToTrip = () => {
@@ -329,7 +329,7 @@ const SplitDetails: React.FC = () => {
     };
     
     setBill(updatedBill);
-    saveBill(updatedBill);
+    updateBill(updatedBill);
     toast.success(`${participant.name} added to this bill`);
   };
   
@@ -365,7 +365,7 @@ const SplitDetails: React.FC = () => {
     };
     
     setBill(updatedBill);
-    saveBill(updatedBill);
+    updateBill(updatedBill);
     toast.success("Participant removed");
   };
   

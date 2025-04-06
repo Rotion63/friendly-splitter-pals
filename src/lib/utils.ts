@@ -1,3 +1,4 @@
+
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { Bill, Participant, PartialPayment, Currency } from "./types";
@@ -56,7 +57,7 @@ export function generateId(prefix: string = ''): string {
   return `${prefix}${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
-// Now we'll update the settlement calculation algorithm
+// Fix the calculateSplits function to properly handle the bill calculation
 export function calculateSplits(bill: Bill): Record<string, number> {
   const result: Record<string, number> = {};
   
@@ -67,18 +68,15 @@ export function calculateSplits(bill: Bill): Record<string, number> {
   
   // Apply discount if any
   const discountAmount = bill.discount || 0;
-  const effectiveTotalAmount = bill.totalAmount - discountAmount;
   
   // Calculate what each person owes for their items
   bill.items.forEach(item => {
     if (item.participants.length > 0) {
-      // If there's a discount, we need to proportionally reduce each item
-      const discountFactor = effectiveTotalAmount / bill.totalAmount;
-      const adjustedAmount = item.amount * discountFactor;
-      const perPersonAmount = adjustedAmount / item.participants.length;
+      const perPersonAmount = item.amount / item.participants.length;
       
       item.participants.forEach(pId => {
-        result[pId] = (result[pId] || 0) - perPersonAmount; // Negative means they owe this amount
+        // Negative means they owe this amount
+        result[pId] = (result[pId] || 0) - perPersonAmount; 
       });
     }
   });
@@ -86,12 +84,15 @@ export function calculateSplits(bill: Bill): Record<string, number> {
   // Handle partial payments if any
   if (bill.partialPayments && bill.partialPayments.length > 0) {
     bill.partialPayments.forEach(payment => {
-      result[payment.payerId] = (result[payment.payerId] || 0) + payment.amount;
+      if (payment && payment.payerId) {
+        result[payment.payerId] = (result[payment.payerId] || 0) + payment.amount;
+      }
     });
   } 
   // If there's a single payer for the remainder
   else if (bill.paidBy) {
-    result[bill.paidBy] = (result[bill.paidBy] || 0) + effectiveTotalAmount;
+    // Add the total amount (minus discount) to the payer
+    result[bill.paidBy] = (result[bill.paidBy] || 0) + (bill.totalAmount - discountAmount);
   }
   
   return result;

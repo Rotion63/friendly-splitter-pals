@@ -9,7 +9,17 @@ export const getBills = (): Bill[] => {
 
 export const saveBill = (bill: Bill): void => {
   const bills = getBills();
-  localStorage.setItem('bills', JSON.stringify([...bills, bill]));
+  // Check if this bill already exists
+  const existingBillIndex = bills.findIndex(b => b.id === bill.id);
+  
+  if (existingBillIndex >= 0) {
+    // Update existing bill instead of adding a new one
+    bills[existingBillIndex] = bill;
+    localStorage.setItem('bills', JSON.stringify(bills));
+  } else {
+    // Add new bill
+    localStorage.setItem('bills', JSON.stringify([...bills, bill]));
+  }
 };
 
 export const updateBill = (bill: Bill): void => {
@@ -59,6 +69,7 @@ export const createEmptyBill = (
     participants: [...participants],
     items: [],
     tripId,
+    place: "" // Add default empty place property to match type
   };
 };
 
