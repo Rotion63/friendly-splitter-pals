@@ -48,6 +48,8 @@ export interface Bill {
   isDummy?: boolean; // Flag to identify dummy bills
   tripId?: string; // Link to a trip if applicable
   place?: string; // Adding place property explicitly
+  placeId?: string; // ID of the place this bill belongs to
+  day?: number; // Day of the trip this bill belongs to
 }
 
 export interface MenuItem {
@@ -61,6 +63,18 @@ export interface Place {
   name: string;
   menu: MenuItem[];
   initialContribution?: number; // Amount collected for group expenses
+  participants?: Participant[]; // Participants in this place/trip
+  startDate?: string; // Start date for trips
+  endDate?: string; // End date for trips
+  days?: PlaceDay[]; // Days in the trip
+  bills?: string[]; // Bills associated with this place
+}
+
+export interface PlaceDay {
+  id: string;
+  date: string;
+  bills: string[]; // Bill IDs
+  notes?: string;
 }
 
 export interface FriendGroup {

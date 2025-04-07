@@ -19,9 +19,11 @@ import {
   removeGroup, 
   createEmptyGroup 
 } from "@/lib/groupsStorage";
-import { getFriends } from "@/lib/friendsStorage";
-import { Trash2, UserPlus, Users, X } from "lucide-react";
+import { getFriends, saveFriend } from "@/lib/friendsStorage";
+import { Trash2, UserPlus, Users, X, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { generateId } from "@/lib/utils";
+import { useLanguage } from "@/components/LanguageProvider";
 
 interface GroupManagerProps {
   onSelectGroup?: (group: FriendGroup) => void;
@@ -35,6 +37,9 @@ const GroupManager: React.FC<GroupManagerProps> = ({ onSelectGroup }) => {
   const [selectedFriends, setSelectedFriends] = useState<Participant[]>([]);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showAddFriendDialog, setShowAddFriendDialog] = useState(false);
+  const [newFriendName, setNewFriendName] = useState("");
+  const { t } = useLanguage();
 
   useEffect(() => {
     // Load groups and friends
@@ -44,7 +49,7 @@ const GroupManager: React.FC<GroupManagerProps> = ({ onSelectGroup }) => {
 
   const handleCreateGroup = () => {
     if (!newGroupName.trim()) {
-      toast.error("Please enter a group name");
+      toast.error(t("Please enter a group name", "कृपया समूह नाम प्रविष्ट गर्नुहोस्"));
       return;
     }
 
@@ -59,13 +64,13 @@ const GroupManager: React.FC<GroupManagerProps> = ({ onSelectGroup }) => {
     setSelectedFriends([]);
     setShowCreateDialog(false);
     
-    toast.success(`${newGroupName} group created`);
+    toast.success(`${newGroupName} ${t("group created", "समूह सिर्जना गरियो")}`);
   };
 
   const handleDeleteGroup = (groupId: string) => {
     removeGroup(groupId);
     setGroups(groups.filter(g => g.id !== groupId));
-    toast.success("Group deleted");
+    toast.success(t("Group deleted", "समूह मेटाइयो"));
   };
 
   const handleEditGroup = (group: FriendGroup) => {
@@ -95,7 +100,7 @@ const GroupManager: React.FC<GroupManagerProps> = ({ onSelectGroup }) => {
     setSelectedFriends([]);
     setShowEditDialog(false);
     
-    toast.success("Group updated");
+    toast.success(t("Group updated", "समूह अपडेट गरियो"));
   };
 
   const toggleFriendSelection = (friend: Participant) => {
@@ -111,40 +116,75 @@ const GroupManager: React.FC<GroupManagerProps> = ({ onSelectGroup }) => {
     setNewGroupName("");
     setShowCreateDialog(true);
   };
+  
+  const handleAddNewFriend = () => {
+    if (!newFriendName.trim()) return;
+    
+    const newFriend: Participant = {
+      id: generateId("friend-"),
+      name: newFriendName.trim(),
+    };
+    
+    // Save to friends list
+    saveFriend(newFriend);
+    
+    // Update local state
+    const updatedFriends = [...friends, newFriend];
+    setFriends(updatedFriends);
+    
+    // Select the new friend for the current group
+    setSelectedFriends([...selectedFriends, newFriend]);
+    
+    // Reset and close dialog
+    setNewFriendName("");
+    setShowAddFriendDialog(false);
+    
+    toast.success(t("Friend added", "साथी थपियो"));
+  };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium">Friend Groups</h3>
+        <h3 className="text-lg font-medium">{t("Friend Groups", "साथी समूहहरू")}</h3>
         
         {/* Create Group Dialog */}
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm" onClick={handleOpenCreateDialog}>
               <Users className="h-4 w-4 mr-2" />
-              Create Group
+              {t("Create Group", "समूह सिर्जना गर्नुहोस्")}
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Create New Friend Group</DialogTitle>
+              <DialogTitle>{t("Create New Friend Group", "नयाँ साथी समूह सिर्जना गर्नुहोस्")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="group-name">Group Name</Label>
+                <Label htmlFor="group-name">{t("Group Name", "समूह नाम")}</Label>
                 <Input 
                   id="group-name" 
                   value={newGroupName} 
                   onChange={(e) => setNewGroupName(e.target.value)}
-                  placeholder="e.g., College Friends, Roommates"
+                  placeholder={t("e.g., College Friends, Roommates", "जस्तै, कलेज साथीहरू, रुममेटहरू")}
                 />
               </div>
               
               <div className="space-y-2">
-                <Label>Select Members</Label>
+                <div className="flex justify-between items-center">
+                  <Label>{t("Select Members", "सदस्यहरू चयन गर्नुहोस्")}</Label>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setShowAddFriendDialog(true)}
+                  >
+                    <UserPlus className="h-4 w-4 mr-1" />
+                    {t("Add New", "नयाँ थप्नुहोस्")}
+                  </Button>
+                </div>
                 <div className="max-h-60 overflow-y-auto space-y-2 border rounded-md p-2">
                   {friends.length === 0 ? (
-                    <p className="text-sm text-muted-foreground p-2">No friends added yet</p>
+                    <p className="text-sm text-muted-foreground p-2">{t("No friends added yet", "अहिलेसम्म कुनै साथी थपिएको छैन")}</p>
                   ) : (
                     friends.map(friend => (
                       <div 
@@ -167,14 +207,48 @@ const GroupManager: React.FC<GroupManagerProps> = ({ onSelectGroup }) => {
             <DialogFooter className="sm:justify-start">
               <DialogClose asChild>
                 <Button type="button" variant="secondary">
-                  Cancel
+                  {t("Cancel", "रद्द गर्नुहोस्")}
                 </Button>
               </DialogClose>
               <Button 
                 onClick={handleCreateGroup}
                 disabled={!newGroupName.trim() || selectedFriends.length === 0}
               >
-                Create Group
+                {t("Create Group", "समूह सिर्जना गर्नुहोस्")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        {/* Add New Friend Dialog */}
+        <Dialog open={showAddFriendDialog} onOpenChange={setShowAddFriendDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>{t("Add New Friend", "नयाँ साथी थप्नुहोस्")}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="new-friend-name">{t("Friend Name", "साथी नाम")}</Label>
+                <Input 
+                  id="new-friend-name" 
+                  value={newFriendName} 
+                  onChange={(e) => setNewFriendName(e.target.value)}
+                  placeholder={t("Enter friend's name", "साथीको नाम प्रविष्ट गर्नुहोस्")}
+                  autoFocus
+                />
+              </div>
+            </div>
+            <DialogFooter className="sm:justify-start">
+              <DialogClose asChild>
+                <Button type="button" variant="secondary">
+                  {t("Cancel", "रद्द गर्नुहोस्")}
+                </Button>
+              </DialogClose>
+              <Button 
+                onClick={handleAddNewFriend}
+                disabled={!newFriendName.trim()}
+              >
+                {t("Add Friend", "साथी थप्नुहोस्")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -184,11 +258,11 @@ const GroupManager: React.FC<GroupManagerProps> = ({ onSelectGroup }) => {
         <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Edit Friend Group</DialogTitle>
+              <DialogTitle>{t("Edit Friend Group", "साथी समूह सम्पादन गर्नुहोस्")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-group-name">Group Name</Label>
+                <Label htmlFor="edit-group-name">{t("Group Name", "समूह नाम")}</Label>
                 <Input 
                   id="edit-group-name" 
                   value={newGroupName} 
@@ -197,10 +271,20 @@ const GroupManager: React.FC<GroupManagerProps> = ({ onSelectGroup }) => {
               </div>
               
               <div className="space-y-2">
-                <Label>Select Members</Label>
+                <div className="flex justify-between items-center">
+                  <Label>{t("Select Members", "सदस्यहरू चयन गर्नुहोस्")}</Label>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setShowAddFriendDialog(true)}
+                  >
+                    <UserPlus className="h-4 w-4 mr-1" />
+                    {t("Add New", "नयाँ थप्नुहोस्")}
+                  </Button>
+                </div>
                 <div className="max-h-60 overflow-y-auto space-y-2 border rounded-md p-2">
                   {friends.length === 0 ? (
-                    <p className="text-sm text-muted-foreground p-2">No friends added yet</p>
+                    <p className="text-sm text-muted-foreground p-2">{t("No friends added yet", "अहिलेसम्म कुनै साथी थपिएको छैन")}</p>
                   ) : (
                     friends.map(friend => (
                       <div 
@@ -223,14 +307,14 @@ const GroupManager: React.FC<GroupManagerProps> = ({ onSelectGroup }) => {
             <DialogFooter className="sm:justify-start">
               <DialogClose asChild>
                 <Button type="button" variant="secondary">
-                  Cancel
+                  {t("Cancel", "रद्द गर्नुहोस्")}
                 </Button>
               </DialogClose>
               <Button 
                 onClick={handleSaveEdit}
                 disabled={!newGroupName.trim() || selectedFriends.length === 0}
               >
-                Save Changes
+                {t("Save Changes", "परिवर्तनहरू बचत गर्नुहोस्")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -240,7 +324,7 @@ const GroupManager: React.FC<GroupManagerProps> = ({ onSelectGroup }) => {
       {/* Group List */}
       <div className="space-y-2">
         {groups.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No groups created yet</p>
+          <p className="text-sm text-muted-foreground">{t("No groups created yet", "अहिलेसम्म कुनै समूह सिर्जना गरिएको छैन")}</p>
         ) : (
           groups.map(group => (
             <div 
@@ -250,7 +334,7 @@ const GroupManager: React.FC<GroupManagerProps> = ({ onSelectGroup }) => {
               <div className="flex-1">
                 <h4 className="font-medium">{group.name}</h4>
                 <p className="text-sm text-muted-foreground">
-                  {group.members.length} {group.members.length === 1 ? 'member' : 'members'}
+                  {group.members.length} {group.members.length === 1 ? t('member', 'सदस्य') : t('members', 'सदस्यहरू')}
                 </p>
               </div>
               <div className="flex space-x-2">
@@ -260,7 +344,7 @@ const GroupManager: React.FC<GroupManagerProps> = ({ onSelectGroup }) => {
                     size="sm"
                     onClick={() => onSelectGroup(group)}
                   >
-                    Select
+                    {t("Select", "चयन गर्नुहोस्")}
                   </Button>
                 )}
                 <Button 
@@ -268,7 +352,7 @@ const GroupManager: React.FC<GroupManagerProps> = ({ onSelectGroup }) => {
                   size="sm"
                   onClick={() => handleEditGroup(group)}
                 >
-                  Edit
+                  {t("Edit", "सम्पादन गर्नुहोस्")}
                 </Button>
                 <Button 
                   variant="ghost" 
