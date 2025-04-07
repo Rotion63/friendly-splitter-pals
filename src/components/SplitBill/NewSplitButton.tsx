@@ -15,7 +15,7 @@ const NewSplitButton: React.FC = () => {
         ease: [0.22, 1, 0.36, 1]
       }}
       whileTap={{ scale: 0.95 }}
-      className="fixed bottom-20 right-8 z-40" // Increased bottom margin to move above navbar
+      className="fixed bottom-24 right-8 z-50" // Increased bottom margin to position above navbar & increased z-index
     >
       <Link 
         to="/new-split"

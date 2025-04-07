@@ -14,12 +14,11 @@ let activeCurrency: Currency = {
   name: 'Nepali Rupee'
 };
 
+// Simplified currency list with only three options
 export const currencies: Currency[] = [
   { code: 'NPR', symbol: 'Rs.', name: 'Nepali Rupee' },
   { code: 'USD', symbol: '$', name: 'US Dollar' },
   { code: 'EUR', symbol: '€', name: 'Euro' },
-  { code: 'GBP', symbol: '£', name: 'British Pound' },
-  { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
 ];
 
 export function setActiveCurrency(currency: Currency) {
@@ -35,7 +34,11 @@ export function getActiveCurrency(): Currency {
     try {
       const parsed = JSON.parse(savedCurrency);
       if (parsed && parsed.code && parsed.symbol && parsed.name) {
-        activeCurrency = parsed;
+        // Ensure it's one of our three currencies
+        const foundCurrency = currencies.find(c => c.code === parsed.code);
+        if (foundCurrency) {
+          activeCurrency = foundCurrency;
+        }
       }
     } catch (e) {
       console.error('Failed to parse saved currency', e);
@@ -92,6 +95,14 @@ export function calculateSplits(bill: Bill): Record<string, number> {
         result[payment.payerId] = (result[payment.payerId] || 0) + payment.amount;
       }
     });
+    
+    // If there's a remaining amount and a paidBy person
+    const totalPaid = bill.partialPayments.reduce((sum, payment) => sum + payment.amount, 0);
+    const remainingAmount = finalTotal - totalPaid;
+    
+    if (remainingAmount > 0 && bill.paidBy) {
+      result[bill.paidBy] = (result[bill.paidBy] || 0) + remainingAmount;
+    }
   } 
   // If there's a single payer for the remainder
   else if (bill.paidBy) {
@@ -102,7 +113,7 @@ export function calculateSplits(bill: Bill): Record<string, number> {
   return result;
 }
 
-// This new function will calculate optimized settlements
+// This function will calculate optimized settlements
 export function calculateOptimizedSettlements(bill: Bill) {
   const splits = calculateSplits(bill);
   const settlements = [];
@@ -118,7 +129,9 @@ export function calculateOptimizedSettlements(bill: Bill) {
         mainCollector = payment.payerId;
       }
     });
-  } else if (bill.paidBy) {
+  } 
+  
+  if (!mainCollector && bill.paidBy) {
     mainCollector = bill.paidBy;
   }
   
