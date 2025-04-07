@@ -12,6 +12,7 @@ import { getBills, deleteBill } from "@/lib/billStorage";
 import { Button } from "@/components/ui/button";
 import { Settings, MapPin } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useLanguage } from "@/components/LanguageProvider";
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -21,8 +22,32 @@ const HomePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState("active");
   const [showGuide, setShowGuide] = useState(false);
   const isMobile = useIsMobile();
+  const { t } = useLanguage();
+
+  // Add currency change event listener to refresh bills when currency changes
+  useEffect(() => {
+    const handleCurrencyChange = () => {
+      loadBills();
+    };
+    
+    window.addEventListener('currency-changed', handleCurrencyChange);
+    return () => {
+      window.removeEventListener('currency-changed', handleCurrencyChange);
+    };
+  }, []);
 
   useEffect(() => {
+    loadBills();
+
+    // Check if this is the first time opening the app
+    const hasSeenGuide = localStorage.getItem('hasSeenGuide');
+    if (!hasSeenGuide) {
+      setShowGuide(true);
+      localStorage.setItem('hasSeenGuide', 'true');
+    }
+  }, []);
+
+  const loadBills = () => {
     const loadedBills = getBills();
     setBills(loadedBills);
 
@@ -41,14 +66,7 @@ const HomePage: React.FC = () => {
 
     setActiveBills(active);
     setSettledBills(settled);
-
-    // Check if this is the first time opening the app
-    const hasSeenGuide = localStorage.getItem('hasSeenGuide');
-    if (!hasSeenGuide) {
-      setShowGuide(true);
-      localStorage.setItem('hasSeenGuide', 'true');
-    }
-  }, []);
+  };
 
   const handleViewBill = (billId: string) => {
     navigate(`/split-details/${billId}`);
@@ -60,24 +78,7 @@ const HomePage: React.FC = () => {
 
   const handleDeleteBill = (billId: string) => {
     deleteBill(billId);
-    const updatedBills = getBills();
-    setBills(updatedBills);
-    
-    const active: Bill[] = [];
-    const settled: Bill[] = [];
-
-    updatedBills.forEach(bill => {
-      const isFullySettled = bill.settlements?.every(settlement => settlement.settled) ?? false;
-      
-      if (isFullySettled && bill.settlements && bill.settlements.length > 0) {
-        settled.push(bill);
-      } else {
-        active.push(bill);
-      }
-    });
-
-    setActiveBills(active);
-    setSettledBills(settled);
+    loadBills();
   };
 
   const handleCloseGuide = () => {
@@ -88,7 +89,7 @@ const HomePage: React.FC = () => {
     <AppLayout title="कति भो बिल ?">
       <div className="py-4">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Bill Splitter</h1>
+          <h1 className="text-2xl font-bold">{t("Bill Splitter", "बिल स्प्लिटर")}</h1>
           <div className="flex space-x-2">
             <Button 
               size="sm" 
@@ -102,7 +103,7 @@ const HomePage: React.FC = () => {
         </div>
         
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-medium">Your Bills</h2>
+          <h2 className="text-lg font-medium">{t("Your Bills", "तपाईंको बिलहरू")}</h2>
           <div className="flex space-x-2">
             <Button 
               size="sm" 
@@ -111,15 +112,15 @@ const HomePage: React.FC = () => {
               className="text-primary"
             >
               <MapPin className="h-4 w-4 mr-1" />
-              <span className="text-sm">Places & Groups</span>
+              <span className="text-sm">{t("Places & Groups", "स्थान र समूह")}</span>
             </Button>
           </div>
         </div>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="active">Active Bills</TabsTrigger>
-            <TabsTrigger value="settled">Settled Bills</TabsTrigger>
+            <TabsTrigger value="active">{t("Active Bills", "सक्रिय बिलहरू")}</TabsTrigger>
+            <TabsTrigger value="settled">{t("Settled Bills", "निपटाइएका बिलहरू")}</TabsTrigger>
           </TabsList>
           
           <TabsContent value="active" className="mt-4">
@@ -131,7 +132,7 @@ const HomePage: React.FC = () => {
                   exit={{ opacity: 0 }}
                   className="text-center py-8 text-muted-foreground"
                 >
-                  <p>No active bills yet. Create your first bill!</p>
+                  <p>{t("No active bills yet. Create your first bill!", "अहिलेसम्म कुनै सक्रिय बिल छैन। आफ्नो पहिलो बिल सिर्जना गर्नुहोस्!")}</p>
                 </motion.div>
               ) : (
                 <motion.div
@@ -164,7 +165,7 @@ const HomePage: React.FC = () => {
                   exit={{ opacity: 0 }}
                   className="text-center py-8 text-muted-foreground"
                 >
-                  <p>No settled bills yet</p>
+                  <p>{t("No settled bills yet", "अहिले सम्म कुनै निपटाइएका बिलहरू छैनन्")}</p>
                 </motion.div>
               ) : (
                 <motion.div

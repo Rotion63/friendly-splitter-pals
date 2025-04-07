@@ -7,10 +7,12 @@ import GroupManager from "@/components/SplitBill/GroupManager";
 import FriendsList from "@/components/SplitBill/FriendsList";
 import { Participant } from "@/lib/types";
 import { getFriends, saveFriend, removeFriend } from "@/lib/friendsStorage";
+import { useLanguage } from "@/components/LanguageProvider";
 
 const PlacesAndGroups: React.FC = () => {
   const [activeTab, setActiveTab] = useState("groups");
   const [friends, setFriends] = useState<Participant[]>([]);
+  const { t } = useLanguage();
 
   useEffect(() => {
     setFriends(getFriends());
@@ -27,7 +29,7 @@ const PlacesAndGroups: React.FC = () => {
   };
 
   return (
-    <AppLayout showBackButton title="Places & Groups">
+    <AppLayout showBackButton title={t("Places & Groups", "स्थान र समूह")}>
       <div className="py-6">
         <FriendsList
           friends={friends}
@@ -37,8 +39,8 @@ const PlacesAndGroups: React.FC = () => {
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="groups">Groups</TabsTrigger>
-            <TabsTrigger value="places">Places</TabsTrigger>
+            <TabsTrigger value="groups">{t("Groups", "समूहहरू")}</TabsTrigger>
+            <TabsTrigger value="places">{t("Places", "स्थानहरू")}</TabsTrigger>
           </TabsList>
           
           <TabsContent value="groups" className="pt-6">

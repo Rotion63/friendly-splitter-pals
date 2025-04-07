@@ -17,16 +17,30 @@ import {
 import { cn } from "@/lib/utils";
 import { currencies, getActiveCurrency, setActiveCurrency } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useLanguage } from "./LanguageProvider";
 
 export function CurrencySelector() {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState(getActiveCurrency().code);
   const isMobile = useIsMobile();
+  const { t } = useLanguage();
 
   // Ensure the component reacts to currency changes
   useEffect(() => {
     setValue(getActiveCurrency().code);
   }, []);
+
+  const handleSelectCurrency = (currentValue: string) => {
+    const selectedCurrency = currencies.find(c => c.code.toLowerCase() === currentValue.toLowerCase());
+    if (selectedCurrency) {
+      setActiveCurrency(selectedCurrency);
+      setValue(selectedCurrency.code);
+      setOpen(false);
+      
+      // Force a re-render by dispatching a custom event
+      window.dispatchEvent(new Event('currency-changed'));
+    }
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -39,7 +53,7 @@ export function CurrencySelector() {
         >
           {value
             ? currencies.find((currency) => currency.code === value)?.name
-            : "Select currency..."}
+            : t("Select currency...", "मुद्रा छान्नुहोस्...")}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -48,21 +62,14 @@ export function CurrencySelector() {
         isMobile ? "max-w-[calc(100vw-2rem)]" : ""
       )}>
         <Command>
-          <CommandInput placeholder="Search currency..." />
-          <CommandEmpty>No currency found.</CommandEmpty>
+          <CommandInput placeholder={t("Search currency...", "मुद्रा खोज्नुहोस्...")} />
+          <CommandEmpty>{t("No currency found.", "कुनै मुद्रा फेला परेन।")}</CommandEmpty>
           <CommandGroup className="max-h-60 overflow-y-auto">
             {currencies.map((currency) => (
               <CommandItem
                 key={currency.code}
                 value={currency.code}
-                onSelect={(currentValue) => {
-                  const selectedCurrency = currencies.find(c => c.code.toLowerCase() === currentValue.toLowerCase());
-                  if (selectedCurrency) {
-                    setActiveCurrency(selectedCurrency);
-                    setValue(currentValue);
-                    setOpen(false);
-                  }
-                }}
+                onSelect={handleSelectCurrency}
               >
                 <Check
                   className={cn(

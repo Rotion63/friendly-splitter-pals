@@ -33,7 +33,10 @@ export function getActiveCurrency(): Currency {
   const savedCurrency = localStorage.getItem('active-currency');
   if (savedCurrency) {
     try {
-      activeCurrency = JSON.parse(savedCurrency);
+      const parsed = JSON.parse(savedCurrency);
+      if (parsed && parsed.code && parsed.symbol && parsed.name) {
+        activeCurrency = parsed;
+      }
     } catch (e) {
       console.error('Failed to parse saved currency', e);
     }
@@ -68,6 +71,7 @@ export function calculateSplits(bill: Bill): Record<string, number> {
   
   // Apply discount if any
   const discountAmount = bill.discount || 0;
+  const finalTotal = bill.totalAmount - discountAmount;
   
   // Calculate what each person owes for their items
   bill.items.forEach(item => {
@@ -92,7 +96,7 @@ export function calculateSplits(bill: Bill): Record<string, number> {
   // If there's a single payer for the remainder
   else if (bill.paidBy) {
     // Add the total amount (minus discount) to the payer
-    result[bill.paidBy] = (result[bill.paidBy] || 0) + (bill.totalAmount - discountAmount);
+    result[bill.paidBy] = (result[bill.paidBy] || 0) + finalTotal;
   }
   
   return result;

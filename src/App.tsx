@@ -10,25 +10,28 @@ import NotFound from './pages/NotFound';
 import TripDetails from './pages/TripDetails';
 import { ThemeProvider } from './components/ThemeProvider';
 import { Toaster } from '@/components/ui/toaster';
+import { LanguageProvider } from './components/LanguageProvider';
 
 import './App.css';
 
 function App() {
   return (
     <ThemeProvider defaultTheme="light">
-      <Router>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/new-split" element={<NewSplit />} />
-          <Route path="/places-and-groups" element={<PlacesAndGroups />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/split-details/:id" element={<SplitDetails />} />
-          <Route path="/split-summary/:id" element={<SplitSummary />} />
-          <Route path="/trip/:id" element={<TripDetails />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-        <Toaster />
-      </Router>
+      <LanguageProvider>
+        <Router>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/new-split" element={<NewSplit />} />
+            <Route path="/places-and-groups" element={<PlacesAndGroups />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/split-details/:id" element={<SplitDetails />} />
+            <Route path="/split-summary/:id" element={<SplitSummary />} />
+            <Route path="/trip/:id" element={<TripDetails />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          <Toaster />
+        </Router>
+      </LanguageProvider>
     </ThemeProvider>
   );
 }
