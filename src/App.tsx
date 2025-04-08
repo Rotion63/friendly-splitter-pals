@@ -30,6 +30,7 @@ function App() {
             <Route path="/split-details/:id" element={<SplitDetails />} />
             <Route path="/split-summary/:id" element={<SplitSummary />} />
             <Route path="/trip/:id" element={<TripDetails />} />
+            <Route path="/trip/new" element={<PlaceDetails />} />
             <Route path="/place/:id" element={<PlaceDetails />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

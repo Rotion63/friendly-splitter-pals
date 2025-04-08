@@ -30,12 +30,6 @@ const FriendsAndGroups: React.FC = () => {
   return (
     <AppLayout showBackButton title={t("Friends & Groups", "साथी र समूह")}>
       <div className="py-6">
-        <FriendsList
-          friends={friends}
-          onAddFriend={handleAddFriend}
-          onRemoveFriend={handleRemoveFriend}
-        />
-
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="friends">{t("Friends", "साथीहरू")}</TabsTrigger>
@@ -47,10 +41,12 @@ const FriendsAndGroups: React.FC = () => {
               {t("Manage your friends list. These friends will be available across the app.", 
                 "तपाईंको साथीहरूको सूची व्यवस्थापन गर्नुहोस्। यी साथीहरू एपभरि उपलब्ध हुनेछन्।")}
             </div>
-            <div className="bg-muted/30 rounded-lg p-4 text-center">
-              {t("Use the button above to add more friends to your list.",
-                "तपाईंको सूचीमा थप साथीहरू थप्न माथिको बटन प्रयोग गर्नुहोस्।")}
-            </div>
+            
+            <FriendsList
+              friends={friends}
+              onAddFriend={handleAddFriend}
+              onRemoveFriend={handleRemoveFriend}
+            />
           </TabsContent>
           
           <TabsContent value="groups" className="pt-6">
