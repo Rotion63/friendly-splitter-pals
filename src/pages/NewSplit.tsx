@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
@@ -28,6 +27,9 @@ import { generateId } from "@/lib/utils";
 
 const NewSplit: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const mode = searchParams.get('mode') || 'quick';
+  
   const [title, setTitle] = useState("");
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [friends, setFriends] = useState<Participant[]>([]);
@@ -35,6 +37,19 @@ const NewSplit: React.FC = () => {
   const [showAddFriends, setShowAddFriends] = useState(false);
   const [showAddGroup, setShowAddGroup] = useState(false);
   const [showMenuScanner, setShowMenuScanner] = useState(false);
+  
+  useEffect(() => {
+    const defaultTitles: Record<string, string> = {
+      'quick': '',
+      'recurring': 'Monthly Utilities',
+      'dining': 'Restaurant Bill',
+      'scheduled': 'Regular Split'
+    };
+    
+    if (defaultTitles[mode]) {
+      setTitle(defaultTitles[mode]);
+    }
+  }, [mode]);
   
   useEffect(() => {
     const friendsList = getFriends();
@@ -98,8 +113,16 @@ const NewSplit: React.FC = () => {
     }
     
     const newBill = createEmptyBill(title, participants);
-    saveBill(newBill);
     
+    if (mode === 'recurring') {
+      newBill.isRecurring = true;
+    } else if (mode === 'dining') {
+      newBill.isDining = true;
+    } else if (mode === 'scheduled') {
+      newBill.isScheduled = true;
+    }
+    
+    saveBill(newBill);
     navigate(`/split-details/${newBill.id}`);
   };
   
@@ -149,8 +172,19 @@ const NewSplit: React.FC = () => {
     setShowAddGroup(!showAddGroup);
   };
   
+  const getPageTitle = () => {
+    const titles: Record<string, string> = {
+      'quick': 'Quick Split',
+      'recurring': 'Recurring Expenses',
+      'dining': 'Dining Split',
+      'scheduled': 'Scheduled Split'
+    };
+    
+    return titles[mode] || 'New Split';
+  };
+  
   return (
-    <AppLayout showBackButton title="New Split">
+    <AppLayout showBackButton title={getPageTitle()}>
       <div className="py-6">
         <motion.form
           initial={{ opacity: 0 }}
@@ -165,7 +199,9 @@ const NewSplit: React.FC = () => {
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g., Dinner, Vacation, Groceries"
+              placeholder={mode === 'recurring' ? "e.g., Rent, Internet, Electricity" : 
+                           mode === 'dining' ? "e.g., Dinner at Restaurant" : 
+                           "e.g., Dinner, Vacation, Groceries"}
               className="text-lg"
               required
             />
@@ -294,25 +330,27 @@ const NewSplit: React.FC = () => {
               disabled={!title.trim() || participants.length < 2}
             >
               <FileText className="h-5 w-5 mr-2" />
-              Continue Manually
+              {mode === 'dining' ? 'Continue to Menu' : 'Continue Manually'}
             </Button>
             
-            <Button 
-              type="button" 
-              variant="outline"
-              className="flex-1 py-6 flex items-center justify-center gap-2"
-              onClick={() => {
-                if (!title.trim() || participants.length < 2) {
-                  toast.error("Please enter title and add at least 2 participants");
-                  return;
-                }
-                setShowMenuScanner(true);
-              }}
-              disabled={!title.trim() || participants.length < 2}
-            >
-              <Camera className="h-5 w-5" />
-              Scan Menu
-            </Button>
+            {mode === 'dining' && (
+              <Button 
+                type="button" 
+                variant="outline"
+                className="flex-1 py-6 flex items-center justify-center gap-2"
+                onClick={() => {
+                  if (!title.trim() || participants.length < 2) {
+                    toast.error("Please enter title and add at least 2 participants");
+                    return;
+                  }
+                  setShowMenuScanner(true);
+                }}
+                disabled={!title.trim() || participants.length < 2}
+              >
+                <Camera className="h-5 w-5" />
+                Scan Menu
+              </Button>
+            )}
           </div>
         </motion.form>
         
