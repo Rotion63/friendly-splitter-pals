@@ -7,19 +7,26 @@ import { getBillsByTripId, createEmptyBill, saveBill, removeBill } from "@/lib/b
 import { Trip, Bill, Participant } from "@/lib/types";
 import { formatCurrency, generateId } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { 
-  Calendar, 
-  Users, 
-  Receipt, 
-  Plus, 
-  Edit2, 
-  ArrowRight
+import {
+  Calendar,
+  Users,
+  Receipt,
+  Plus,
+  Edit2,
+  ArrowRight,
+  UserPlus
 } from "lucide-react";
 import { toast } from "sonner";
 import ParticipantBalances from "@/components/SplitBill/ParticipantBalances";
 import DeleteBillButton from "@/components/SplitBill/DeleteBillButton";
 import InitialContributionManager from "@/components/SplitBill/InitialContributionManager";
 import MenuScanner from "@/components/SplitBill/MenuScanner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { useLanguage } from "@/components/LanguageProvider";
+import { getFriends, saveFriend } from "@/lib/billStorage";
+import { getGroups } from "@/lib/groupsStorage";
 
 const TripDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -29,6 +36,11 @@ const TripDetails: React.FC = () => {
   const [isAddingBill, setIsAddingBill] = useState(false);
   const [newBillTitle, setNewBillTitle] = useState("");
   const [showMenuScanner, setShowMenuScanner] = useState(false);
+  const [showAddParticipantDialog, setShowAddParticipantDialog] = useState(false);
+  const [newParticipantName, setNewParticipantName] = useState("");
+  const [availableParticipants, setAvailableParticipants] = useState<Participant[]>([]);
+  const [selectedParticipantIds, setSelectedParticipantIds] = useState<string[]>([]);
+  const { t } = useLanguage();
   
   useEffect(() => {
     if (!id) {
@@ -43,6 +55,15 @@ const TripDetails: React.FC = () => {
       // Load all bills associated with this trip
       const tripBills = getBillsByTripId(id);
       setBills(tripBills);
+      
+      // If we have participants in the trip, pre-select them for new bills
+      if (tripData.participants && tripData.participants.length > 0) {
+        setSelectedParticipantIds(tripData.participants.map(p => p.id));
+      }
+      
+      // Load available participants (existing friends)
+      const friends = getFriends();
+      setAvailableParticipants([...friends]);
     } else {
       toast.error("Trip not found");
       navigate("/");
@@ -52,7 +73,12 @@ const TripDetails: React.FC = () => {
   const handleCreateBill = () => {
     if (!trip || !newBillTitle.trim()) return;
     
-    const newBill = createEmptyBill(newBillTitle, trip.participants, trip.id);
+    // Select participants for this bill
+    const selectedParticipants = trip.participants.filter(p => 
+      selectedParticipantIds.includes(p.id)
+    );
+    
+    const newBill = createEmptyBill(newBillTitle, selectedParticipants, trip.id);
     saveBill(newBill);
     
     // Update local state
@@ -116,8 +142,13 @@ const TripDetails: React.FC = () => {
       return;
     }
     
+    // Get selected participants for this bill
+    const selectedParticipants = trip.participants.filter(p => 
+      selectedParticipantIds.includes(p.id)
+    );
+    
     // Create new bill with scanned items
-    const newBill = createEmptyBill(newBillTitle, trip.participants, trip.id);
+    const newBill = createEmptyBill(newBillTitle, selectedParticipants, trip.id);
     
     let totalAmount = 0;
     
@@ -129,7 +160,7 @@ const TripDetails: React.FC = () => {
         id: generateId("item-"),
         name: item.name,
         amount: item.price,
-        participants: trip.participants.map(p => p.id) // Default to all participants
+        participants: selectedParticipants.map(p => p.id) // Default to all selected participants
       };
     });
     
@@ -142,6 +173,48 @@ const TripDetails: React.FC = () => {
     
     toast.success("Bill created with scanned items");
     navigate(`/split-details/${newBill.id}`);
+  };
+  
+  const handleAddParticipant = () => {
+    if (!trip || !newParticipantName.trim()) return;
+    
+    // Create new participant
+    const newParticipant: Participant = {
+      id: generateId("friend-"),
+      name: newParticipantName.trim(),
+      balance: 0,
+      initialContribution: 0
+    };
+    
+    // Save to friends list
+    saveFriend(newParticipant);
+    
+    // Add to trip participants
+    const updatedParticipants = [...trip.participants, newParticipant];
+    const updatedTrip = { ...trip, participants: updatedParticipants };
+    
+    // Save trip
+    setTrip(updatedTrip);
+    saveTrip(updatedTrip);
+    
+    // Update available participants
+    setAvailableParticipants([...availableParticipants, newParticipant]);
+    
+    // Select the new participant for bill
+    setSelectedParticipantIds([...selectedParticipantIds, newParticipant.id]);
+    
+    setNewParticipantName("");
+    setShowAddParticipantDialog(false);
+    
+    toast.success("Participant added to trip");
+  };
+  
+  const toggleBillParticipant = (participantId: string) => {
+    if (selectedParticipantIds.includes(participantId)) {
+      setSelectedParticipantIds(selectedParticipantIds.filter(id => id !== participantId));
+    } else {
+      setSelectedParticipantIds([...selectedParticipantIds, participantId]);
+    }
   };
   
   if (!trip) {
@@ -212,10 +285,23 @@ const TripDetails: React.FC = () => {
         
         {/* Participant Balances */}
         <div className="glass-panel rounded-xl p-4">
-          <ParticipantBalances 
-            participants={trip.participants}
-            onBalanceUpdate={updateParticipantBalance}
-          />
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-medium">Participants</h3>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowAddParticipantDialog(true)}
+            >
+              <UserPlus className="h-4 w-4 mr-1" /> Add Participant
+            </Button>
+          </div>
+          
+          <div className="mt-4">
+            <ParticipantBalances 
+              participants={trip.participants}
+              onBalanceUpdate={updateParticipantBalance}
+            />
+          </div>
         </div>
         
         {/* Bills List */}
@@ -234,6 +320,9 @@ const TripDetails: React.FC = () => {
                       <h4 className="font-medium">{bill.title}</h4>
                       <p className="text-sm text-muted-foreground">
                         {new Date(bill.date).toLocaleDateString()} - {formatCurrency(bill.totalAmount)}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {bill.participants.length} participants
                       </p>
                     </div>
                     <div className="flex space-x-2">
@@ -276,15 +365,42 @@ const TripDetails: React.FC = () => {
                 onChange={(e) => setNewBillTitle(e.target.value)}
                 className="w-full p-2 rounded-md border mb-3"
               />
+              
+              <div className="mb-4">
+                <h5 className="text-sm font-medium mb-2">Select Participants for this Bill</h5>
+                <div className="max-h-40 overflow-y-auto border rounded-md p-2">
+                  {trip.participants.map(participant => (
+                    <div 
+                      key={participant.id}
+                      className="flex items-center p-2 hover:bg-muted rounded-md"
+                    >
+                      <input
+                        type="checkbox"
+                        id={`bill-participant-${participant.id}`}
+                        checked={selectedParticipantIds.includes(participant.id)}
+                        onChange={() => toggleBillParticipant(participant.id)}
+                        className="mr-2"
+                      />
+                      <label 
+                        htmlFor={`bill-participant-${participant.id}`}
+                        className="flex-grow cursor-pointer"
+                      >
+                        {participant.name}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
               <div className="flex justify-end space-x-2">
                 <Button 
                   variant="outline" 
                   size="sm"
                   onClick={() => {
-                    if (newBillTitle.trim()) {
+                    if (newBillTitle.trim() && selectedParticipantIds.length > 0) {
                       setShowMenuScanner(true);
                     } else {
-                      toast.error("Please enter a bill title first");
+                      toast.error("Please enter a bill title and select participants");
                     }
                   }}
                 >
@@ -300,7 +416,7 @@ const TripDetails: React.FC = () => {
                 <Button 
                   size="sm"
                   onClick={handleCreateBill}
-                  disabled={!newBillTitle.trim()}
+                  disabled={!newBillTitle.trim() || selectedParticipantIds.length === 0}
                 >
                   Create Empty
                 </Button>
@@ -318,11 +434,46 @@ const TripDetails: React.FC = () => {
           )}
         </div>
 
+        {/* Menu Scanner */}
         <MenuScanner 
           isOpen={showMenuScanner}
           onClose={() => setShowMenuScanner(false)}
           onMenuProcessed={handleMenuProcessed}
         />
+        
+        {/* Add Participant Dialog */}
+        <Dialog open={showAddParticipantDialog} onOpenChange={setShowAddParticipantDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>{t("Add New Participant", "नयाँ सहभागी थप्नुहोस्")}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="new-participant-name">{t("Participant Name", "सहभागी नाम")}</Label>
+                <Input 
+                  id="new-participant-name" 
+                  value={newParticipantName} 
+                  onChange={(e) => setNewParticipantName(e.target.value)}
+                  placeholder={t("Enter name", "नाम प्रविष्ट गर्नुहोस्")}
+                  autoFocus
+                />
+              </div>
+            </div>
+            <DialogFooter className="sm:justify-start">
+              <DialogClose asChild>
+                <Button type="button" variant="secondary">
+                  {t("Cancel", "रद्द गर्नुहोस्")}
+                </Button>
+              </DialogClose>
+              <Button 
+                onClick={handleAddParticipant}
+                disabled={!newParticipantName.trim()}
+              >
+                {t("Add Participant", "सहभागी थप्नुहोस्")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );

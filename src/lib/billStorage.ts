@@ -81,7 +81,17 @@ export const getFriends = (): Participant[] => {
 
 export const saveFriend = (friend: Participant): void => {
   const friends = getFriends();
-  localStorage.setItem('friends', JSON.stringify([...friends, friend]));
+  // Check if friend already exists
+  const existingFriendIndex = friends.findIndex(f => f.id === friend.id);
+  
+  if (existingFriendIndex >= 0) {
+    // Update existing friend
+    friends[existingFriendIndex] = friend;
+    localStorage.setItem('friends', JSON.stringify(friends));
+  } else {
+    // Add new friend
+    localStorage.setItem('friends', JSON.stringify([...friends, friend]));
+  }
 };
 
 export const removeFriend = (id: string): void => {
