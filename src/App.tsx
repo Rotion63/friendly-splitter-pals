@@ -15,6 +15,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { LanguageProvider } from './components/LanguageProvider';
 import SplitTypeSelection from './components/SplitBill/SplitTypeSelection';
 import QuickSplit from './pages/QuickSplit';
+import PlacesAndGroups from './pages/PlacesAndGroups';
 
 import './App.css';
 
@@ -29,6 +30,7 @@ function App() {
               <Route path="/new-split" element={<SplitTypeSelection />} />
               <Route path="/quick-split" element={<QuickSplit />} />
               <Route path="/friends-and-groups" element={<FriendsAndGroups />} />
+              <Route path="/places-and-groups" element={<PlacesAndGroups />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/split-details/:id" element={<SplitDetails />} />
               <Route path="/split-summary/:id" element={<SplitSummary />} />

@@ -2,7 +2,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Zap, Users } from "lucide-react";
+import { Zap, MapPin } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { AppLayout } from "@/components/AppLayout";
 import { useLanguage } from "@/components/LanguageProvider";
@@ -43,16 +43,16 @@ const SplitTypeSelection: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.1 }}
           >
-            <Link to="/friends-and-groups">
+            <Link to="/places-and-groups">
               <Card className="p-5 hover:bg-accent/50 transition-colors">
                 <div className="flex items-center gap-4">
                   <div className="bg-primary/10 p-3 rounded-full">
-                    <Users size={24} className="text-primary" />
+                    <MapPin size={24} className="text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-medium text-lg">{t("Friends & Groups", "मित्रहरू र समूहहरू")}</h3>
+                    <h3 className="font-medium text-lg">{t("Trips & Places", "यात्रा र स्थानहरू")}</h3>
                     <p className="text-muted-foreground text-sm">
-                      {t("Manage friends and groups for easier splitting", "सजिलो विभाजनको लागि मित्रहरू र समूहहरू व्यवस्थापन गर्नुहोस्")}
+                      {t("Organize bills by trips and favorite places", "यात्रा र मनपर्ने स्थानहरू अनुसार बिलहरू व्यवस्थित गर्नुहोस्")}
                     </p>
                   </div>
                 </div>
