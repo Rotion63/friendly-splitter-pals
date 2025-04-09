@@ -1,3 +1,4 @@
+
 export interface Participant {
   id: string;
   name: string;
@@ -49,11 +50,6 @@ export interface Bill {
   place?: string; // Adding place property explicitly
   placeId?: string; // ID of the place this bill belongs to
   day?: number; // Day of the trip this bill belongs to
-  isRecurring?: boolean; // Flag for recurring expenses like utilities
-  isDining?: boolean; // Flag for restaurant/dining bills
-  isScheduled?: boolean; // Flag for scheduled splits
-  recurringFrequency?: 'weekly' | 'monthly' | 'quarterly' | 'yearly'; // For recurring bills
-  nextDueDate?: string; // For recurring/scheduled bills
 }
 
 export interface MenuItem {

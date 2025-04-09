@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Bill } from "@/lib/types";
 import { getBills, deleteBill } from "@/lib/billStorage";
 import { Button } from "@/components/ui/button";
-import { Settings } from "lucide-react";
+import { Settings, MapPin } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLanguage } from "@/components/LanguageProvider";
 
@@ -104,6 +104,17 @@ const HomePage: React.FC = () => {
         
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-medium">{t("Your Bills", "तपाईंको बिलहरू")}</h2>
+          <div className="flex space-x-2">
+            <Button 
+              size="sm" 
+              variant="ghost"
+              onClick={() => navigate('/places-and-groups')}
+              className="text-primary"
+            >
+              <MapPin className="h-4 w-4 mr-1" />
+              <span className="text-sm">{t("Places & Groups", "स्थान र समूह")}</span>
+            </Button>
+          </div>
         </div>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4">
