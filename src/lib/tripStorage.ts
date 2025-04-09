@@ -69,7 +69,7 @@ export const createEmptyTrip = (name: string, participants: Trip["participants"]
   return {
     id: generateId("trip-"),
     name: name.trim(),
-    participants,
+    participants: participants || [],
     bills: [],
   };
 };

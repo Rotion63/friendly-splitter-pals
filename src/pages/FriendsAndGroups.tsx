@@ -14,17 +14,21 @@ const FriendsAndGroups: React.FC = () => {
   const { t } = useLanguage();
 
   useEffect(() => {
-    setFriends(getFriends());
+    loadFriends();
   }, []);
+
+  const loadFriends = () => {
+    setFriends(getFriends());
+  };
 
   const handleAddFriend = (friend: Participant) => {
     saveFriend(friend);
-    setFriends([...friends, friend]);
+    loadFriends();
   };
 
   const handleRemoveFriend = (id: string) => {
     removeFriend(id);
-    setFriends(friends.filter(f => f.id !== id));
+    loadFriends();
   };
 
   return (

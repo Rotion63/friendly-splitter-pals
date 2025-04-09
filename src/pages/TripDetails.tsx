@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
-import { getTripById, saveTrip } from "@/lib/tripStorage";
+import { getTripById, saveTrip, createEmptyTrip } from "@/lib/tripStorage";
 import { getBillsByTripId, createEmptyBill, saveBill, removeBill } from "@/lib/billStorage";
 import { Trip, Bill, Participant } from "@/lib/types";
 import { formatCurrency, generateId } from "@/lib/utils";
@@ -20,6 +20,9 @@ import ParticipantBalances from "@/components/SplitBill/ParticipantBalances";
 import DeleteBillButton from "@/components/SplitBill/DeleteBillButton";
 import InitialContributionManager from "@/components/SplitBill/InitialContributionManager";
 import MenuScanner from "@/components/SplitBill/MenuScanner";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useLanguage } from "@/components/LanguageProvider";
 
 const TripDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -29,25 +32,59 @@ const TripDetails: React.FC = () => {
   const [isAddingBill, setIsAddingBill] = useState(false);
   const [newBillTitle, setNewBillTitle] = useState("");
   const [showMenuScanner, setShowMenuScanner] = useState(false);
-  
+  const [showTripDialog, setShowTripDialog] = useState(false);
+  const [newTripName, setNewTripName] = useState("");
+  const [newTripDescription, setNewTripDescription] = useState("");
+  const { t } = useLanguage();
+
   useEffect(() => {
-    if (!id) {
+    // Check if this is a new trip or an existing one
+    if (id === "new") {
+      // Show dialog to create new trip
+      setShowTripDialog(true);
+    } else if (id) {
+      // Load existing trip
+      const tripData = getTripById(id);
+      if (tripData) {
+        setTrip(tripData);
+        
+        // Load all bills associated with this trip
+        const tripBills = getBillsByTripId(id);
+        setBills(tripBills);
+      } else {
+        toast.error(t("Trip not found", "यात्रा फेला परेन"));
+        navigate("/");
+      }
+    } else {
+      // If there's no ID at all, go back to home
       navigate("/");
+    }
+  }, [id, navigate, t]);
+  
+  const handleCreateTrip = () => {
+    if (!newTripName.trim()) {
+      toast.error(t("Please enter a trip name", "कृपया यात्रा नाम प्रविष्ट गर्नुहोस्"));
       return;
     }
     
-    const tripData = getTripById(id);
-    if (tripData) {
-      setTrip(tripData);
-      
-      // Load all bills associated with this trip
-      const tripBills = getBillsByTripId(id);
-      setBills(tripBills);
-    } else {
-      toast.error("Trip not found");
-      navigate("/");
+    // Create new trip with empty participants array
+    const newTrip = createEmptyTrip(newTripName, []);
+    if (newTripDescription) {
+      newTrip.description = newTripDescription;
     }
-  }, [id, navigate]);
+    
+    // Save the trip
+    saveTrip(newTrip);
+    
+    // Set as current trip
+    setTrip(newTrip);
+    setShowTripDialog(false);
+    
+    // Update URL to new trip ID
+    navigate(`/trip/${newTrip.id}`, { replace: true });
+    
+    toast.success(t("Trip created successfully", "यात्रा सफलतापूर्वक सिर्जना गरियो"));
+  };
   
   const handleCreateBill = () => {
     if (!trip || !newBillTitle.trim()) return;
@@ -144,6 +181,53 @@ const TripDetails: React.FC = () => {
     navigate(`/split-details/${newBill.id}`);
   };
   
+  // Show trip creation dialog if we're creating a new trip
+  if (showTripDialog) {
+    return (
+      <AppLayout showBackButton title={t("New Trip", "नयाँ यात्रा")}>
+        <div className="py-6 space-y-5">
+          <div className="glass-panel rounded-xl p-4">
+            <h2 className="text-lg font-bold mb-4">
+              {t("Create New Trip", "नयाँ यात्रा सिर्जना गर्नुहोस्")}
+            </h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium block mb-1">
+                  {t("Trip Name", "यात्रा नाम")} *
+                </label>
+                <Input
+                  placeholder={t("Enter trip name", "यात्रा नाम प्रविष्ट गर्नुहोस्")}
+                  value={newTripName}
+                  onChange={(e) => setNewTripName(e.target.value)}
+                />
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium block mb-1">
+                  {t("Description (Optional)", "विवरण (ऐच्छिक)")}
+                </label>
+                <Input
+                  placeholder={t("Enter description", "विवरण प्रविष्ट गर्नुहोस्")}
+                  value={newTripDescription}
+                  onChange={(e) => setNewTripDescription(e.target.value)}
+                />
+              </div>
+              
+              <Button 
+                className="w-full" 
+                onClick={handleCreateTrip}
+                disabled={!newTripName.trim()}
+              >
+                {t("Create Trip", "यात्रा सिर्जना गर्नुहोस्")}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+  
   if (!trip) {
     return (
       <AppLayout showBackButton title="Loading...">
@@ -174,7 +258,7 @@ const TripDetails: React.FC = () => {
               variant="outline"
               onClick={handleEditTrip}
             >
-              <Edit2 className="h-4 w-4 mr-1" /> Edit
+              <Edit2 className="h-4 w-4 mr-1" /> {t("Edit", "सम्पादन")}
             </Button>
           </div>
           
@@ -192,13 +276,13 @@ const TripDetails: React.FC = () => {
             
             <div className="flex items-center text-muted-foreground">
               <Users className="h-4 w-4 mr-2" />
-              <span>{trip.participants.length} participants</span>
+              <span>{trip.participants.length} {t("participants", "सहभागीहरू")}</span>
             </div>
             
             <div className="flex items-center text-muted-foreground">
               <Receipt className="h-4 w-4 mr-2" />
               <span>
-                {bills.length} {bills.length === 1 ? "bill" : "bills"} - Total: {formatCurrency(calculateTotalSpent())}
+                {bills.length} {bills.length === 1 ? t("bill", "बिल") : t("bills", "बिलहरू")} - {t("Total", "कुल")}: {formatCurrency(calculateTotalSpent())}
               </span>
             </div>
           </div>
@@ -220,14 +304,14 @@ const TripDetails: React.FC = () => {
         
         {/* Bills List */}
         <div className="glass-panel rounded-xl p-4">
-          <h3 className="text-lg font-medium mb-4">Bills</h3>
+          <h3 className="text-lg font-medium mb-4">{t("Bills", "बिलहरू")}</h3>
           
           {bills.length > 0 ? (
             <div className="space-y-3 mb-4">
               {bills.map(bill => (
                 <div 
                   key={bill.id} 
-                  className="bg-white rounded-lg p-4 shadow-sm"
+                  className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm"
                 >
                   <div className="flex justify-between items-center">
                     <div>
@@ -262,16 +346,16 @@ const TripDetails: React.FC = () => {
           ) : (
             <div className="text-center py-8 text-muted-foreground">
               <Receipt className="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p>No bills added to this trip yet</p>
+              <p>{t("No bills added to this trip yet", "यस यात्रामा अहिलेसम्म कुनै बिल थपिएको छैन")}</p>
             </div>
           )}
           
           {isAddingBill ? (
             <div className="bg-muted/20 rounded-lg p-4">
-              <h4 className="font-medium mb-2">New Bill</h4>
+              <h4 className="font-medium mb-2">{t("New Bill", "नयाँ बिल")}</h4>
               <input
                 type="text"
-                placeholder="Bill title"
+                placeholder={t("Bill title", "बिल शीर्षक")}
                 value={newBillTitle}
                 onChange={(e) => setNewBillTitle(e.target.value)}
                 className="w-full p-2 rounded-md border mb-3"
@@ -284,25 +368,25 @@ const TripDetails: React.FC = () => {
                     if (newBillTitle.trim()) {
                       setShowMenuScanner(true);
                     } else {
-                      toast.error("Please enter a bill title first");
+                      toast.error(t("Please enter a bill title first", "कृपया पहिले बिल शीर्षक प्रविष्ट गर्नुहोस्"));
                     }
                   }}
                 >
-                  Scan Menu
+                  {t("Scan Menu", "मेनु स्क्यान")}
                 </Button>
                 <Button 
                   variant="outline" 
                   size="sm"
                   onClick={() => setIsAddingBill(false)}
                 >
-                  Cancel
+                  {t("Cancel", "रद्द")}
                 </Button>
                 <Button 
                   size="sm"
                   onClick={handleCreateBill}
                   disabled={!newBillTitle.trim()}
                 >
-                  Create Empty
+                  {t("Create Empty", "खाली सिर्जना")}
                 </Button>
               </div>
             </div>
@@ -313,7 +397,7 @@ const TripDetails: React.FC = () => {
               onClick={() => setIsAddingBill(true)}
             >
               <Plus className="h-4 w-4 mr-2" />
-              Add New Bill
+              {t("Add New Bill", "नयाँ बिल थप्नुहोस्")}
             </Button>
           )}
         </div>

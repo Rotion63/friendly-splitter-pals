@@ -32,7 +32,7 @@ const SplitTypeSelection: React.FC = () => {
       title: t("Trips & Tours", "यात्रा र भ्रमण"),
       description: t("Track expenses for trips with multiple days", "धेरै दिनको यात्राको खर्च ट्र्याक गर्नुहोस्"),
       icon: Map,
-      path: "/trip/new", // Changed from "/places-and-groups" to "/trip/new"
+      path: "/trip/new",
       color: "bg-green-100 dark:bg-green-900/20",
       iconColor: "text-green-600 dark:text-green-400",
       badge: t("Multiple Days", "धेरै दिन")
