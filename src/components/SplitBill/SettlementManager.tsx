@@ -16,7 +16,7 @@ interface SettlementManagerProps {
 const SettlementManager: React.FC<SettlementManagerProps> = ({ bill, onBillUpdated }) => {
   const [showAllSettlements, setShowAllSettlements] = useState(false);
   
-  // Use the new optimized settlements calculation
+  // Use the optimized settlements calculation
   useEffect(() => {
     if (!bill.settlements || bill.settlements.length === 0) {
       const optimizedSettlements = calculateOptimizedSettlements(bill);

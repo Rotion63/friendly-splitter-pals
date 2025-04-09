@@ -6,11 +6,10 @@ import TripManager from "@/components/SplitBill/TripManager";
 import { useLanguage } from "@/components/LanguageProvider";
 
 const PlacesAndGroups: React.FC = () => {
-  const [activeTab, setActiveTab] = useState("trips");
   const { t } = useLanguage();
 
   return (
-    <AppLayout showBackButton title={t("Trips & Places", "यात्रा र स्थानहरू")}>
+    <AppLayout showBackButton title={t("Trips", "यात्राहरू")}>
       <div className="py-6">
         <TripManager />
       </div>

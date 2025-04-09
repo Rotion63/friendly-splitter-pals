@@ -5,7 +5,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { getTripById, saveTrip } from "@/lib/tripStorage";
 import { getBillsByTripId, createEmptyBill, saveBill, removeBill } from "@/lib/billStorage";
 import { Trip, Bill, Participant } from "@/lib/types";
-import { formatCurrency, generateId } from "@/lib/utils";
+import { formatCurrency, generateId, calculateParticipantBalances } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Calendar,
@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/components/LanguageProvider";
 import { getFriends, saveFriend } from "@/lib/billStorage";
 import { getGroups } from "@/lib/groupsStorage";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const TripDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -40,6 +41,9 @@ const TripDetails: React.FC = () => {
   const [newParticipantName, setNewParticipantName] = useState("");
   const [availableParticipants, setAvailableParticipants] = useState<Participant[]>([]);
   const [selectedParticipantIds, setSelectedParticipantIds] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState("bills");
+  const [calculatedBalances, setCalculatedBalances] = useState<Participant[]>([]);
+  
   const { t } = useLanguage();
   
   useEffect(() => {
@@ -56,6 +60,10 @@ const TripDetails: React.FC = () => {
       const tripBills = getBillsByTripId(id);
       setBills(tripBills);
       
+      // Calculate balances based on initial contributions and bills
+      const updatedBalances = calculateParticipantBalances(tripData, tripBills);
+      setCalculatedBalances(updatedBalances);
+      
       // If we have participants in the trip, pre-select them for new bills
       if (tripData.participants && tripData.participants.length > 0) {
         setSelectedParticipantIds(tripData.participants.map(p => p.id));
@@ -69,6 +77,14 @@ const TripDetails: React.FC = () => {
       navigate("/");
     }
   }, [id, navigate]);
+  
+  // Recalculate balances whenever bills or trip changes
+  useEffect(() => {
+    if (trip) {
+      const updatedBalances = calculateParticipantBalances(trip, bills);
+      setCalculatedBalances(updatedBalances);
+    }
+  }, [bills, trip]);
   
   const handleCreateBill = () => {
     if (!trip || !newBillTitle.trim()) return;
@@ -106,7 +122,15 @@ const TripDetails: React.FC = () => {
   
   const handleDeleteBill = (billId: string) => {
     removeBill(billId);
-    setBills(bills.filter(bill => bill.id !== billId));
+    const updatedBills = bills.filter(bill => bill.id !== billId);
+    setBills(updatedBills);
+    
+    // Recalculate balances after bill is removed
+    if (trip) {
+      const updatedBalances = calculateParticipantBalances(trip, updatedBills);
+      setCalculatedBalances(updatedBalances);
+    }
+    
     toast.success("Bill deleted successfully");
   };
   
@@ -117,14 +141,19 @@ const TripDetails: React.FC = () => {
   const updateParticipantBalance = (participantId: string, newBalance: number) => {
     if (!trip) return;
     
+    // This now updates the initialContribution, not the calculated balance
     const updatedParticipants = trip.participants.map(p => 
-      p.id === participantId ? { ...p, balance: newBalance } : p
+      p.id === participantId ? { ...p, initialContribution: newBalance } : p
     );
     
     const updatedTrip = { ...trip, participants: updatedParticipants };
     setTrip(updatedTrip);
     saveTrip(updatedTrip);
-    toast.success("Balance updated");
+    toast.success("Initial contribution updated");
+    
+    // Recalculate balances
+    const updatedBalances = calculateParticipantBalances(updatedTrip, bills);
+    setCalculatedBalances(updatedBalances);
   };
   
   const handleParticipantsUpdate = (updatedParticipants: Participant[]) => {
@@ -133,7 +162,12 @@ const TripDetails: React.FC = () => {
     const updatedTrip = { ...trip, participants: updatedParticipants };
     setTrip(updatedTrip);
     saveTrip(updatedTrip);
-    toast.success("Contributions updated");
+    
+    // Recalculate balances
+    const updatedBalances = calculateParticipantBalances(updatedTrip, bills);
+    setCalculatedBalances(updatedBalances);
+    
+    toast.success("Initial contributions updated");
   };
   
   const handleMenuProcessed = (items: { name: string; price: number }[]) => {
@@ -167,9 +201,19 @@ const TripDetails: React.FC = () => {
     newBill.totalAmount = totalAmount;
     
     saveBill(newBill);
-    setBills([...bills, newBill]);
+    
+    // Update local state and recalculate balances
+    const updatedBills = [...bills, newBill];
+    setBills(updatedBills);
+    
+    if (trip) {
+      const updatedBalances = calculateParticipantBalances(trip, updatedBills);
+      setCalculatedBalances(updatedBalances);
+    }
+    
     setNewBillTitle("");
     setIsAddingBill(false);
+    setShowMenuScanner(false);
     
     toast.success("Bill created with scanned items");
     navigate(`/split-details/${newBill.id}`);
@@ -182,7 +226,6 @@ const TripDetails: React.FC = () => {
     const newParticipant: Participant = {
       id: generateId("friend-"),
       name: newParticipantName.trim(),
-      balance: 0,
       initialContribution: 0
     };
     
@@ -205,6 +248,10 @@ const TripDetails: React.FC = () => {
     
     setNewParticipantName("");
     setShowAddParticipantDialog(false);
+    
+    // Recalculate balances
+    const updatedBalances = calculateParticipantBalances(updatedTrip, bills);
+    setCalculatedBalances(updatedBalances);
     
     toast.success("Participant added to trip");
   };
@@ -277,162 +324,173 @@ const TripDetails: React.FC = () => {
           </div>
         </div>
         
-        {/* Initial Contributions */}
-        <InitialContributionManager 
-          participants={trip.participants}
-          onParticipantUpdate={handleParticipantsUpdate}
-        />
-        
-        {/* Participant Balances */}
-        <div className="glass-panel rounded-xl p-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium">Participants</h3>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setShowAddParticipantDialog(true)}
-            >
-              <UserPlus className="h-4 w-4 mr-1" /> Add Participant
-            </Button>
-          </div>
+        {/* Tabs for Bills and Participants */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid grid-cols-2 mb-4">
+            <TabsTrigger value="bills">Bills</TabsTrigger>
+            <TabsTrigger value="participants">Participants</TabsTrigger>
+          </TabsList>
           
-          <div className="mt-4">
-            <ParticipantBalances 
-              participants={trip.participants}
-              onBalanceUpdate={updateParticipantBalance}
-            />
-          </div>
-        </div>
-        
-        {/* Bills List */}
-        <div className="glass-panel rounded-xl p-4">
-          <h3 className="text-lg font-medium mb-4">Bills</h3>
-          
-          {bills.length > 0 ? (
-            <div className="space-y-3 mb-4">
-              {bills.map(bill => (
-                <div 
-                  key={bill.id} 
-                  className="bg-white rounded-lg p-4 shadow-sm"
-                >
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h4 className="font-medium">{bill.title}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(bill.date).toLocaleDateString()} - {formatCurrency(bill.totalAmount)}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {bill.participants.length} participants
-                      </p>
-                    </div>
-                    <div className="flex space-x-2">
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleEditBill(bill.id)}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleViewBill(bill.id)}
-                      >
-                        <ArrowRight className="h-4 w-4" />
-                      </Button>
-                      <DeleteBillButton
-                        onDelete={() => handleDeleteBill(bill.id)}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <Receipt className="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p>No bills added to this trip yet</p>
-            </div>
-          )}
-          
-          {isAddingBill ? (
-            <div className="bg-muted/20 rounded-lg p-4">
-              <h4 className="font-medium mb-2">New Bill</h4>
-              <input
-                type="text"
-                placeholder="Bill title"
-                value={newBillTitle}
-                onChange={(e) => setNewBillTitle(e.target.value)}
-                className="w-full p-2 rounded-md border mb-3"
-              />
+          <TabsContent value="bills" className="space-y-4">
+            {/* Bills List */}
+            <div className="glass-panel rounded-xl p-4">
+              <h3 className="text-lg font-medium mb-4">Bills</h3>
               
-              <div className="mb-4">
-                <h5 className="text-sm font-medium mb-2">Select Participants for this Bill</h5>
-                <div className="max-h-40 overflow-y-auto border rounded-md p-2">
-                  {trip.participants.map(participant => (
+              {bills.length > 0 ? (
+                <div className="space-y-3 mb-4">
+                  {bills.map(bill => (
                     <div 
-                      key={participant.id}
-                      className="flex items-center p-2 hover:bg-muted rounded-md"
+                      key={bill.id} 
+                      className="bg-white rounded-lg p-4 shadow-sm"
                     >
-                      <input
-                        type="checkbox"
-                        id={`bill-participant-${participant.id}`}
-                        checked={selectedParticipantIds.includes(participant.id)}
-                        onChange={() => toggleBillParticipant(participant.id)}
-                        className="mr-2"
-                      />
-                      <label 
-                        htmlFor={`bill-participant-${participant.id}`}
-                        className="flex-grow cursor-pointer"
-                      >
-                        {participant.name}
-                      </label>
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h4 className="font-medium">{bill.title}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(bill.date).toLocaleDateString()} - {formatCurrency(bill.totalAmount)}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {bill.participants.length} participants
+                          </p>
+                        </div>
+                        <div className="flex space-x-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleEditBill(bill.id)}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleViewBill(bill.id)}
+                          >
+                            <ArrowRight className="h-4 w-4" />
+                          </Button>
+                          <DeleteBillButton
+                            onDelete={() => handleDeleteBill(bill.id)}
+                          />
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Receipt className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>No bills added to this trip yet</p>
+                </div>
+              )}
+              
+              {isAddingBill ? (
+                <div className="bg-muted/20 rounded-lg p-4">
+                  <h4 className="font-medium mb-2">New Bill</h4>
+                  <input
+                    type="text"
+                    placeholder="Bill title"
+                    value={newBillTitle}
+                    onChange={(e) => setNewBillTitle(e.target.value)}
+                    className="w-full p-2 rounded-md border mb-3"
+                  />
+                  
+                  <div className="mb-4">
+                    <h5 className="text-sm font-medium mb-2">Select Participants for this Bill</h5>
+                    <div className="max-h-40 overflow-y-auto border rounded-md p-2">
+                      {trip.participants.map(participant => (
+                        <div 
+                          key={participant.id}
+                          className="flex items-center p-2 hover:bg-muted rounded-md"
+                        >
+                          <input
+                            type="checkbox"
+                            id={`bill-participant-${participant.id}`}
+                            checked={selectedParticipantIds.includes(participant.id)}
+                            onChange={() => toggleBillParticipant(participant.id)}
+                            className="mr-2"
+                          />
+                          <label 
+                            htmlFor={`bill-participant-${participant.id}`}
+                            className="flex-grow cursor-pointer"
+                          >
+                            {participant.name}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-end space-x-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        if (newBillTitle.trim() && selectedParticipantIds.length > 0) {
+                          setShowMenuScanner(true);
+                        } else {
+                          toast.error("Please enter a bill title and select participants");
+                        }
+                      }}
+                    >
+                      Scan Menu
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setIsAddingBill(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      size="sm"
+                      onClick={handleCreateBill}
+                      disabled={!newBillTitle.trim() || selectedParticipantIds.length === 0}
+                    >
+                      Create Empty
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => setIsAddingBill(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add New Bill
+                </Button>
+              )}
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="participants" className="space-y-4">
+            {/* Initial Contributions */}
+            <InitialContributionManager 
+              participants={trip.participants}
+              onParticipantUpdate={handleParticipantsUpdate}
+            />
+            
+            {/* Participant Final Balances */}
+            <div className="glass-panel rounded-xl p-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-medium">Current Balances</h3>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowAddParticipantDialog(true)}
+                >
+                  <UserPlus className="h-4 w-4 mr-1" /> Add Participant
+                </Button>
               </div>
               
-              <div className="flex justify-end space-x-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => {
-                    if (newBillTitle.trim() && selectedParticipantIds.length > 0) {
-                      setShowMenuScanner(true);
-                    } else {
-                      toast.error("Please enter a bill title and select participants");
-                    }
-                  }}
-                >
-                  Scan Menu
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setIsAddingBill(false)}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  size="sm"
-                  onClick={handleCreateBill}
-                  disabled={!newBillTitle.trim() || selectedParticipantIds.length === 0}
-                >
-                  Create Empty
-                </Button>
+              <div className="mt-4">
+                <ParticipantBalances 
+                  participants={calculatedBalances}
+                />
               </div>
             </div>
-          ) : (
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={() => setIsAddingBill(true)}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add New Bill
-            </Button>
-          )}
-        </div>
+          </TabsContent>
+        </Tabs>
 
         {/* Menu Scanner */}
         <MenuScanner 

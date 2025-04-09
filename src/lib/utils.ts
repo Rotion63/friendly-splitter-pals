@@ -1,7 +1,6 @@
-
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { Bill, Participant, PartialPayment, Currency } from "./types";
+import { Bill, Participant, PartialPayment, Currency, Trip } from "./types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -111,6 +110,31 @@ export function calculateSplits(bill: Bill): Record<string, number> {
   }
   
   return result;
+}
+
+// Function to calculate total participant balance based on initial contribution and bill splits
+export function calculateParticipantBalances(trip: Trip, bills: Bill[]): Participant[] {
+  const participantBalances = [...trip.participants].map(p => ({
+    ...p,
+    // Start with their initial contribution (or 0 if undefined)
+    balance: p.initialContribution || 0
+  }));
+
+  // For each bill in the trip, calculate how it affects balances
+  bills.forEach(bill => {
+    const billSplits = calculateSplits(bill);
+    
+    // Apply the bill splits to each participant's balance
+    Object.entries(billSplits).forEach(([participantId, amount]) => {
+      const participantIndex = participantBalances.findIndex(p => p.id === participantId);
+      if (participantIndex >= 0) {
+        // Add the amount to their balance (negative means they owe, positive means they paid)
+        participantBalances[participantIndex].balance += amount;
+      }
+    });
+  });
+
+  return participantBalances;
 }
 
 // This function will calculate optimized settlements

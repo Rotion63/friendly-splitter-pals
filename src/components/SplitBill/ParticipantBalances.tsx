@@ -7,11 +7,13 @@ import { formatCurrency } from "@/lib/utils";
 interface ParticipantBalancesProps {
   participants: Participant[];
   onBalanceUpdate?: (participantId: string, newBalance: number) => void;
+  showInitialContribution?: boolean;
 }
 
 const ParticipantBalances: React.FC<ParticipantBalancesProps> = ({ 
   participants, 
-  onBalanceUpdate 
+  onBalanceUpdate,
+  showInitialContribution = false
 }) => {
   const handleBalanceChange = (
     participantId: string, 
@@ -27,7 +29,10 @@ const ParticipantBalances: React.FC<ParticipantBalancesProps> = ({
     <div className="space-y-4">
       <h3 className="text-lg font-medium">Participant Balances</h3>
       <p className="text-sm text-muted-foreground mb-4">
-        Track how much money each person has contributed to the pool
+        {showInitialContribution 
+          ? "Track how much money each person has contributed to the pool"
+          : "Current balance after all expenses (positive means they get money back, negative means they owe)"
+        }
       </p>
       
       <div className="space-y-2">
@@ -43,17 +48,22 @@ const ParticipantBalances: React.FC<ParticipantBalancesProps> = ({
               <div>
                 <p className="font-medium">{participant.name}</p>
                 <div className="flex items-center text-xs">
-                  {(participant.balance || 0) > 0 ? (
+                  {showInitialContribution && (
+                    <span className="text-muted-foreground">
+                      Initial: {formatCurrency(participant.initialContribution || 0)}
+                    </span>
+                  )}
+                  {!showInitialContribution && (participant.balance || 0) > 0 ? (
                     <>
                       <ArrowUpRight className="h-3 w-3 text-green-500 mr-1" />
-                      <span className="text-green-600">Has contributed</span>
+                      <span className="text-green-600">Gets money back</span>
                     </>
-                  ) : (participant.balance || 0) < 0 ? (
+                  ) : !showInitialContribution && (participant.balance || 0) < 0 ? (
                     <>
                       <ArrowDownRight className="h-3 w-3 text-red-500 mr-1" />
                       <span className="text-red-600">Owes money</span>
                     </>
-                  ) : (
+                  ) : !showInitialContribution && (
                     <span className="text-muted-foreground">No balance</span>
                   )}
                 </div>
