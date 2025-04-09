@@ -65,6 +65,11 @@ const SplitTypeSelection: React.FC = () => {
       iconColor: "text-rose-600 dark:text-rose-400"
     }
   ];
+
+  const handleNavigate = (path: string) => {
+    console.log("Navigating to:", path);
+    navigate(path);
+  };
   
   return (
     <AppLayout showBackButton title={t("New Split", "नयाँ विभाजन")}>
@@ -83,7 +88,7 @@ const SplitTypeSelection: React.FC = () => {
             >
               <Card 
                 className="cursor-pointer hover:shadow-md transition-all"
-                onClick={() => navigate(option.path)}
+                onClick={() => handleNavigate(option.path)}
               >
                 <div className="p-4 flex items-center gap-4">
                   <div className={`rounded-full p-3 ${option.color}`}>

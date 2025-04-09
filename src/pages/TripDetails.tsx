@@ -23,6 +23,7 @@ import MenuScanner from "@/components/SplitBill/MenuScanner";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useLanguage } from "@/components/LanguageProvider";
+import { getFriends } from "@/lib/friendsStorage";
 
 const TripDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -34,15 +35,27 @@ const TripDetails: React.FC = () => {
   const [showMenuScanner, setShowMenuScanner] = useState(false);
   const [showTripDialog, setShowTripDialog] = useState(false);
   const [newTripName, setNewTripName] = useState("");
+  const [newTripStartDate, setNewTripStartDate] = useState("");
+  const [newTripEndDate, setNewTripEndDate] = useState("");
   const [newTripDescription, setNewTripDescription] = useState("");
+  const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
+  const [availableFriends, setAvailableFriends] = useState<Participant[]>([]);
   const { t } = useLanguage();
 
   useEffect(() => {
+    // Load available friends for selection
+    const friends = getFriends();
+    setAvailableFriends(friends);
+    
+    console.log("TripDetails mounted, id:", id);
+    
     // Check if this is a new trip or an existing one
     if (id === "new") {
+      console.log("Creating new trip, showing dialog");
       // Show dialog to create new trip
       setShowTripDialog(true);
     } else if (id) {
+      console.log("Loading existing trip:", id);
       // Load existing trip
       const tripData = getTripById(id);
       if (tripData) {
@@ -57,6 +70,7 @@ const TripDetails: React.FC = () => {
       }
     } else {
       // If there's no ID at all, go back to home
+      console.log("No trip ID, navigating to home");
       navigate("/");
     }
   }, [id, navigate, t]);
@@ -67,11 +81,24 @@ const TripDetails: React.FC = () => {
       return;
     }
     
-    // Create new trip with empty participants array
-    const newTrip = createEmptyTrip(newTripName, []);
+    // Get selected participants from available friends
+    const participants = availableFriends.filter(friend => 
+      selectedParticipants.includes(friend.id)
+    );
+
+    // Create new trip
+    const newTrip = createEmptyTrip(newTripName, participants);
     if (newTripDescription) {
       newTrip.description = newTripDescription;
     }
+    if (newTripStartDate) {
+      newTrip.startDate = newTripStartDate;
+    }
+    if (newTripEndDate) {
+      newTrip.endDate = newTripEndDate;
+    }
+    
+    console.log("Creating new trip:", newTrip);
     
     // Save the trip
     saveTrip(newTrip);
@@ -84,6 +111,14 @@ const TripDetails: React.FC = () => {
     navigate(`/trip/${newTrip.id}`, { replace: true });
     
     toast.success(t("Trip created successfully", "यात्रा सफलतापूर्वक सिर्जना गरियो"));
+  };
+  
+  const toggleParticipant = (participantId: string) => {
+    if (selectedParticipants.includes(participantId)) {
+      setSelectedParticipants(selectedParticipants.filter(id => id !== participantId));
+    } else {
+      setSelectedParticipants([...selectedParticipants, participantId]);
+    }
   };
   
   const handleCreateBill = () => {
@@ -212,6 +247,64 @@ const TripDetails: React.FC = () => {
                   value={newTripDescription}
                   onChange={(e) => setNewTripDescription(e.target.value)}
                 />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium block mb-1">
+                    {t("Start Date", "सुरु मिति")}
+                  </label>
+                  <Input
+                    type="date"
+                    value={newTripStartDate}
+                    onChange={(e) => setNewTripStartDate(e.target.value)}
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium block mb-1">
+                    {t("End Date", "अन्त्य मिति")}
+                  </label>
+                  <Input
+                    type="date"
+                    value={newTripEndDate}
+                    onChange={(e) => setNewTripEndDate(e.target.value)}
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium block mb-1">
+                  {t("Participants", "सहभागीहरू")}
+                </label>
+                <div className="max-h-40 overflow-y-auto border rounded-md p-2">
+                  {availableFriends.length > 0 ? (
+                    availableFriends.map(friend => (
+                      <div 
+                        key={friend.id}
+                        className="flex items-center p-2 hover:bg-muted rounded-md"
+                      >
+                        <input
+                          type="checkbox"
+                          id={`participant-${friend.id}`}
+                          checked={selectedParticipants.includes(friend.id)}
+                          onChange={() => toggleParticipant(friend.id)}
+                          className="mr-2"
+                        />
+                        <label 
+                          htmlFor={`participant-${friend.id}`}
+                          className="flex-grow cursor-pointer"
+                        >
+                          {friend.name}
+                        </label>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-center text-muted-foreground py-2">
+                      {t("No friends available. Add friends first.", "कुनै साथी उपलब्ध छैन। पहिले साथीहरू थप्नुहोस्।")}
+                    </p>
+                  )}
+                </div>
               </div>
               
               <Button 
