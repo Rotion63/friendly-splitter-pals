@@ -19,12 +19,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   const isMobile = useIsMobile();
   const { theme } = useTheme();
   
-  // Set the theme class on the HTML element to ensure it's applied app-wide
-  useEffect(() => {
-    document.documentElement.classList.remove('light', 'dark');
-    document.documentElement.classList.add(theme);
-  }, [theme]);
-  
   return (
     <div className={`${theme === "dark" ? "dark" : ""} min-h-screen`}>
       <Layout title={title} showBackButton={showBackButton}>
@@ -35,4 +29,4 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       <BottomNavigation />
     </div>
   );
-};
+}
