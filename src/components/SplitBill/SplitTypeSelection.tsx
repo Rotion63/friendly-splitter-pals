@@ -2,7 +2,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Lightning, Users } from "lucide-react";
+import { Zap, Users } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { AppLayout } from "@/components/AppLayout";
 import { useLanguage } from "@/components/LanguageProvider";
@@ -25,7 +25,7 @@ const SplitTypeSelection: React.FC = () => {
               <Card className="p-5 hover:bg-accent/50 transition-colors">
                 <div className="flex items-center gap-4">
                   <div className="bg-primary/10 p-3 rounded-full">
-                    <Lightning size={24} className="text-primary" />
+                    <Zap size={24} className="text-primary" />
                   </div>
                   <div>
                     <h3 className="font-medium text-lg">{t("Quick Split", "द्रुत स्प्लिट")}</h3>
