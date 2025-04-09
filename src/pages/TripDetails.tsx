@@ -2,28 +2,20 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
-import { getTripById, saveTrip, createEmptyTrip } from "@/lib/tripStorage";
+import { getTripById, saveTrip } from "@/lib/tripStorage";
 import { getBillsByTripId, createEmptyBill, saveBill, removeBill } from "@/lib/billStorage";
-import { Trip, Bill, Participant } from "@/lib/types";
+import { Trip, Bill } from "@/lib/types";
 import { formatCurrency, generateId } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { 
-  Calendar, 
-  Users, 
-  Receipt, 
-  Plus, 
-  Edit2, 
-  ArrowRight
-} from "lucide-react";
+import { Calendar, Users, Receipt, Plus, Edit2 } from "lucide-react";
 import { toast } from "sonner";
 import ParticipantBalances from "@/components/SplitBill/ParticipantBalances";
-import DeleteBillButton from "@/components/SplitBill/DeleteBillButton";
 import InitialContributionManager from "@/components/SplitBill/InitialContributionManager";
 import MenuScanner from "@/components/SplitBill/MenuScanner";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useLanguage } from "@/components/LanguageProvider";
-import { getFriends } from "@/lib/friendsStorage";
+import TripCreationForm from "@/components/SplitBill/TripCreationForm";
+import BillsList from "@/components/SplitBill/BillsList";
 
 const TripDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -33,31 +25,17 @@ const TripDetails: React.FC = () => {
   const [isAddingBill, setIsAddingBill] = useState(false);
   const [newBillTitle, setNewBillTitle] = useState("");
   const [showMenuScanner, setShowMenuScanner] = useState(false);
-  const [showTripDialog, setShowTripDialog] = useState(false);
-  const [newTripName, setNewTripName] = useState("");
-  const [newTripStartDate, setNewTripStartDate] = useState("");
-  const [newTripEndDate, setNewTripEndDate] = useState("");
-  const [newTripDescription, setNewTripDescription] = useState("");
-  const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
-  const [availableFriends, setAvailableFriends] = useState<Participant[]>([]);
   const { t } = useLanguage();
-
+  
+  // Check for new trip creation or loading existing trip
   useEffect(() => {
-    // Load available friends for selection
-    const friends = getFriends();
-    setAvailableFriends(friends);
-    
     console.log("TripDetails mounted, id:", id);
     
-    // Check if this is a new trip or an existing one
-    if (id === "new") {
-      console.log("Creating new trip, showing dialog");
-      // Show dialog to create new trip
-      setShowTripDialog(true);
-    } else if (id) {
+    // If it's a new trip, the creation form will be shown
+    if (id !== "new" && id) {
       console.log("Loading existing trip:", id);
-      // Load existing trip
       const tripData = getTripById(id);
+      
       if (tripData) {
         setTrip(tripData);
         
@@ -68,57 +46,13 @@ const TripDetails: React.FC = () => {
         toast.error(t("Trip not found", "यात्रा फेला परेन"));
         navigate("/");
       }
-    } else {
-      // If there's no ID at all, go back to home
-      console.log("No trip ID, navigating to home");
-      navigate("/");
     }
   }, [id, navigate, t]);
   
-  const handleCreateTrip = () => {
-    if (!newTripName.trim()) {
-      toast.error(t("Please enter a trip name", "कृपया यात्रा नाम प्रविष्ट गर्नुहोस्"));
-      return;
-    }
-    
-    // Get selected participants from available friends
-    const participants = availableFriends.filter(friend => 
-      selectedParticipants.includes(friend.id)
-    );
-
-    // Create new trip
-    const newTrip = createEmptyTrip(newTripName, participants);
-    if (newTripDescription) {
-      newTrip.description = newTripDescription;
-    }
-    if (newTripStartDate) {
-      newTrip.startDate = newTripStartDate;
-    }
-    if (newTripEndDate) {
-      newTrip.endDate = newTripEndDate;
-    }
-    
-    console.log("Creating new trip:", newTrip);
-    
-    // Save the trip
-    saveTrip(newTrip);
-    
-    // Set as current trip
-    setTrip(newTrip);
-    setShowTripDialog(false);
-    
-    // Update URL to new trip ID
-    navigate(`/trip/${newTrip.id}`, { replace: true });
-    
-    toast.success(t("Trip created successfully", "यात्रा सफलतापूर्वक सिर्जना गरियो"));
-  };
-  
-  const toggleParticipant = (participantId: string) => {
-    if (selectedParticipants.includes(participantId)) {
-      setSelectedParticipants(selectedParticipants.filter(id => id !== participantId));
-    } else {
-      setSelectedParticipants([...selectedParticipants, participantId]);
-    }
+  const handleTripCreated = (tripId: string) => {
+    console.log("Trip created with ID:", tripId);
+    // Navigate to the trip details page
+    navigate(`/trip/${tripId}`, { replace: true });
   };
   
   const handleCreateBill = () => {
@@ -142,18 +76,10 @@ const TripDetails: React.FC = () => {
     toast.info("Trip editing will be available in a future update");
   };
   
-  const handleViewBill = (billId: string) => {
-    navigate(`/split-summary/${billId}`);
-  };
-  
-  const handleEditBill = (billId: string) => {
-    navigate(`/split-details/${billId}`);
-  };
-  
   const handleDeleteBill = (billId: string) => {
     removeBill(billId);
     setBills(bills.filter(bill => bill.id !== billId));
-    toast.success("Bill deleted successfully");
+    toast.success(t("Bill deleted successfully", "बिल सफलतापूर्वक मेटाइयो"));
   };
   
   const calculateTotalSpent = (): number => {
@@ -170,21 +96,21 @@ const TripDetails: React.FC = () => {
     const updatedTrip = { ...trip, participants: updatedParticipants };
     setTrip(updatedTrip);
     saveTrip(updatedTrip);
-    toast.success("Balance updated");
+    toast.success(t("Balance updated", "ब्यालेन्स अपडेट गरियो"));
   };
   
-  const handleParticipantsUpdate = (updatedParticipants: Participant[]) => {
+  const handleParticipantsUpdate = (updatedParticipants: Trip["participants"]) => {
     if (!trip) return;
     
     const updatedTrip = { ...trip, participants: updatedParticipants };
     setTrip(updatedTrip);
     saveTrip(updatedTrip);
-    toast.success("Contributions updated");
+    toast.success(t("Contributions updated", "योगदानहरू अपडेट गरिए"));
   };
   
   const handleMenuProcessed = (items: { name: string; price: number }[]) => {
     if (!trip || !newBillTitle.trim() || items.length === 0) {
-      toast.error("Please enter a bill title first");
+      toast.error(t("Please enter a bill title first", "कृपया पहिले बिल शीर्षक प्रविष्ट गर्नुहोस्"));
       return;
     }
     
@@ -212,118 +138,23 @@ const TripDetails: React.FC = () => {
     setNewBillTitle("");
     setIsAddingBill(false);
     
-    toast.success("Bill created with scanned items");
+    toast.success(t("Bill created with scanned items", "स्क्यान गरिएका आइटमहरू सहित बिल सिर्जना गरियो"));
     navigate(`/split-details/${newBill.id}`);
   };
   
-  // Show trip creation dialog if we're creating a new trip
-  if (showTripDialog) {
+  // Show trip creation form for new trips
+  if (id === "new") {
     return (
       <AppLayout showBackButton title={t("New Trip", "नयाँ यात्रा")}>
-        <div className="py-6 space-y-5">
-          <div className="glass-panel rounded-xl p-4">
-            <h2 className="text-lg font-bold mb-4">
-              {t("Create New Trip", "नयाँ यात्रा सिर्जना गर्नुहोस्")}
-            </h2>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium block mb-1">
-                  {t("Trip Name", "यात्रा नाम")} *
-                </label>
-                <Input
-                  placeholder={t("Enter trip name", "यात्रा नाम प्रविष्ट गर्नुहोस्")}
-                  value={newTripName}
-                  onChange={(e) => setNewTripName(e.target.value)}
-                />
-              </div>
-              
-              <div>
-                <label className="text-sm font-medium block mb-1">
-                  {t("Description (Optional)", "विवरण (ऐच्छिक)")}
-                </label>
-                <Input
-                  placeholder={t("Enter description", "विवरण प्रविष्ट गर्नुहोस्")}
-                  value={newTripDescription}
-                  onChange={(e) => setNewTripDescription(e.target.value)}
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium block mb-1">
-                    {t("Start Date", "सुरु मिति")}
-                  </label>
-                  <Input
-                    type="date"
-                    value={newTripStartDate}
-                    onChange={(e) => setNewTripStartDate(e.target.value)}
-                  />
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium block mb-1">
-                    {t("End Date", "अन्त्य मिति")}
-                  </label>
-                  <Input
-                    type="date"
-                    value={newTripEndDate}
-                    onChange={(e) => setNewTripEndDate(e.target.value)}
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="text-sm font-medium block mb-1">
-                  {t("Participants", "सहभागीहरू")}
-                </label>
-                <div className="max-h-40 overflow-y-auto border rounded-md p-2">
-                  {availableFriends.length > 0 ? (
-                    availableFriends.map(friend => (
-                      <div 
-                        key={friend.id}
-                        className="flex items-center p-2 hover:bg-muted rounded-md"
-                      >
-                        <input
-                          type="checkbox"
-                          id={`participant-${friend.id}`}
-                          checked={selectedParticipants.includes(friend.id)}
-                          onChange={() => toggleParticipant(friend.id)}
-                          className="mr-2"
-                        />
-                        <label 
-                          htmlFor={`participant-${friend.id}`}
-                          className="flex-grow cursor-pointer"
-                        >
-                          {friend.name}
-                        </label>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-center text-muted-foreground py-2">
-                      {t("No friends available. Add friends first.", "कुनै साथी उपलब्ध छैन। पहिले साथीहरू थप्नुहोस्।")}
-                    </p>
-                  )}
-                </div>
-              </div>
-              
-              <Button 
-                className="w-full" 
-                onClick={handleCreateTrip}
-                disabled={!newTripName.trim()}
-              >
-                {t("Create Trip", "यात्रा सिर्जना गर्नुहोस्")}
-              </Button>
-            </div>
-          </div>
-        </div>
+        <TripCreationForm onSuccess={handleTripCreated} />
       </AppLayout>
     );
   }
   
+  // Show loading state
   if (!trip) {
     return (
-      <AppLayout showBackButton title="Loading...">
+      <AppLayout showBackButton title={t("Loading...", "लोड हुँदैछ...")}>
         <div className="flex items-center justify-center h-full py-12">
           <div className="animate-pulse text-center">
             <div className="h-8 w-32 bg-muted/50 rounded mb-4 mx-auto" />
@@ -334,6 +165,7 @@ const TripDetails: React.FC = () => {
     );
   }
   
+  // Render trip details once loaded
   return (
     <AppLayout showBackButton title={trip.name}>
       <div className="py-6 space-y-6">
@@ -399,59 +231,19 @@ const TripDetails: React.FC = () => {
         <div className="glass-panel rounded-xl p-4">
           <h3 className="text-lg font-medium mb-4">{t("Bills", "बिलहरू")}</h3>
           
-          {bills.length > 0 ? (
-            <div className="space-y-3 mb-4">
-              {bills.map(bill => (
-                <div 
-                  key={bill.id} 
-                  className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm"
-                >
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h4 className="font-medium">{bill.title}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(bill.date).toLocaleDateString()} - {formatCurrency(bill.totalAmount)}
-                      </p>
-                    </div>
-                    <div className="flex space-x-2">
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleEditBill(bill.id)}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleViewBill(bill.id)}
-                      >
-                        <ArrowRight className="h-4 w-4" />
-                      </Button>
-                      <DeleteBillButton
-                        onDelete={() => handleDeleteBill(bill.id)}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <Receipt className="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p>{t("No bills added to this trip yet", "यस यात्रामा अहिलेसम्म कुनै बिल थपिएको छैन")}</p>
-            </div>
-          )}
+          <div className="space-y-3 mb-4">
+            <BillsList bills={bills} onDelete={handleDeleteBill} />
+          </div>
           
           {isAddingBill ? (
             <div className="bg-muted/20 rounded-lg p-4">
               <h4 className="font-medium mb-2">{t("New Bill", "नयाँ बिल")}</h4>
-              <input
+              <Input
                 type="text"
                 placeholder={t("Bill title", "बिल शीर्षक")}
                 value={newBillTitle}
                 onChange={(e) => setNewBillTitle(e.target.value)}
-                className="w-full p-2 rounded-md border mb-3"
+                className="mb-3"
               />
               <div className="flex justify-end space-x-2">
                 <Button 
