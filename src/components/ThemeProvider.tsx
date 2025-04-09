@@ -27,24 +27,31 @@ export function ThemeProvider({
   storageKey = 'bill-splitter-theme',
   ...props
 }: ThemeProviderProps) {
-  // Get the initial theme from localStorage or use the defaultTheme
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window !== 'undefined') {
+  // Initialize with the default theme first
+  const [theme, setTheme] = useState<Theme>(defaultTheme);
+  
+  // Then update it from localStorage if available
+  useEffect(() => {
+    try {
       const savedTheme = localStorage.getItem(storageKey);
-      return (savedTheme as Theme) || defaultTheme;
+      if (savedTheme === 'light' || savedTheme === 'dark') {
+        setTheme(savedTheme);
+      }
+    } catch (e) {
+      console.error('Error accessing localStorage:', e);
     }
-    return defaultTheme;
-  });
+  }, [storageKey]);
 
   useEffect(() => {
-    const root = window.document.documentElement;
-    
-    root.classList.remove('light', 'dark');
-    root.classList.add(theme);
-    
-    // Only access localStorage in the browser environment
-    if (typeof window !== 'undefined') {
+    try {
+      const root = window.document.documentElement;
+      
+      root.classList.remove('light', 'dark');
+      root.classList.add(theme);
+      
       localStorage.setItem(storageKey, theme);
+    } catch (e) {
+      console.error('Error updating theme:', e);
     }
   }, [theme, storageKey]);
 

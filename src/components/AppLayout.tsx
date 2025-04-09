@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React from "react";
 import Layout from "./Layout";
 import { BottomNavigation } from "./BottomNavigation";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -29,4 +29,4 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       <BottomNavigation />
     </div>
   );
-}
+};
