@@ -9,8 +9,6 @@ import UserGuide from "@/components/SplitBill/UserGuide";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Bill } from "@/lib/types";
 import { getBills, deleteBill } from "@/lib/billStorage";
-import { Button } from "@/components/ui/button";
-import { Settings, MapPin } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLanguage } from "@/components/LanguageProvider";
 
@@ -88,33 +86,12 @@ const HomePage: React.FC = () => {
   return (
     <AppLayout title="कति भो बिल ?">
       <div className="py-4">
-        <div className="flex justify-between items-center mb-6">
+        <div className="mb-6">
           <h1 className="text-2xl font-bold">{t("Bill Splitter", "बिल स्प्लिटर")}</h1>
-          <div className="flex space-x-2">
-            <Button 
-              size="sm" 
-              variant="ghost"
-              onClick={() => navigate('/settings')}
-              className="p-2"
-            >
-              <Settings className="h-5 w-5" />
-            </Button>
-          </div>
         </div>
         
-        <div className="flex justify-between items-center mb-4">
+        <div className="mb-4">
           <h2 className="text-lg font-medium">{t("Your Bills", "तपाईंको बिलहरू")}</h2>
-          <div className="flex space-x-2">
-            <Button 
-              size="sm" 
-              variant="ghost"
-              onClick={() => navigate('/places-and-groups')}
-              className="text-primary"
-            >
-              <MapPin className="h-4 w-4 mr-1" />
-              <span className="text-sm">{t("Places & Groups", "स्थान र समूह")}</span>
-            </Button>
-          </div>
         </div>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4">

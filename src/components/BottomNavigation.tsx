@@ -17,7 +17,7 @@ export function BottomNavigation() {
   const menuItems = [
     { icon: Home, label: t("Home", "होम"), path: "/" },
     { icon: PlusCircle, label: t("New Split", "नयाँ बिल"), path: "/new-split" },
-    { icon: Users, label: t("Places & Groups", "स्थान र समूह"), path: "/places-and-groups" },
+    { icon: Users, label: t("Friends", "मित्रहरू"), path: "/friends-and-groups" },
     { icon: Settings, label: t("Settings", "सेटिङहरू"), path: "/settings" },
   ];
   
