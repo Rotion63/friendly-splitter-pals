@@ -1,7 +1,6 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { AppLayout } from "@/components/AppLayout";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TripManager from "@/components/SplitBill/TripManager";
 import { useLanguage } from "@/components/LanguageProvider";
 
