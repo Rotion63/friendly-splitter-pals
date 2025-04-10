@@ -118,7 +118,8 @@ export function useBillManager({ billId, tripId, onNavigate }: UseBillManagerPro
     const newItems = [...bill.items];
     
     menuItems.forEach(item => {
-      const itemPrice = 'price' in item ? item.price : item.amount;
+      // Correctly handle both types of objects
+      const itemPrice = 'price' in item ? item.price : ('amount' in item ? (item as any).amount : 0);
       
       const newItem: BillItem = {
         id: generateId("item-"),

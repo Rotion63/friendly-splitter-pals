@@ -61,7 +61,13 @@ const SplitDetails: React.FC = () => {
   };
 
   const handleBillScanned = (items: { name: string; amount: number }[]) => {
-    addMenuItems(items);
+    // Convert the scanned items to the expected format
+    const convertedItems = items.map(item => ({
+      name: item.name,
+      price: item.amount // Map amount to price
+    }));
+    
+    addMenuItems(convertedItems);
   };
 
   const handleMenuScanned = (items: { name: string; price: number }[]) => {
