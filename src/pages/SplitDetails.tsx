@@ -1,375 +1,100 @@
-import React, { useState, useEffect } from "react";
+
+import React, { useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
-import { Bill, BillItem, PartialPayment, MenuItem, Participant } from "@/lib/types";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { generateId } from "@/lib/utils";
-import BillItemList from "@/components/SplitBill/BillItemList";
-import AddBillItem from "@/components/SplitBill/AddBillItem";
-import PaidBySelector from "@/components/SplitBill/PaidBySelector";
-import PartialPaymentManager from "@/components/SplitBill/PartialPaymentManager";
-import DiscountInput from "@/components/SplitBill/DiscountInput";
-import BillScanner from "@/components/SplitBill/BillScanner";
-import MenuSelector from "@/components/SplitBill/MenuSelector";
-import MenuScanner from "@/components/SplitBill/MenuScanner";
-import AddParticipant from "@/components/SplitBill/AddParticipant";
-import DeleteBillButton from "@/components/SplitBill/DeleteBillButton";
-import { createEmptyBill, getBillById, saveBill, removeBill, updateBill } from "@/lib/billStorage";
+import { MenuItem, Participant } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
-import { Camera, Receipt, Plus, ArrowUp, Users } from "lucide-react";
+import { useBillManager } from "@/hooks/useBillManager";
+import BillItemList from "@/components/SplitBill/BillItemList";
+import AddParticipant from "@/components/SplitBill/AddParticipant";
+import DiscountInput from "@/components/SplitBill/DiscountInput";
+import BillItemEntry from "@/components/SplitBill/BillItemEntry";
+import BillHeader from "@/components/SplitBill/BillHeader";
+import PaymentMethodSelector from "@/components/SplitBill/PaymentMethodSelector";
+import BillActions from "@/components/SplitBill/BillActions";
 
 const SplitDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const [bill, setBill] = useState<Bill | null>(null);
-  const [newItemName, setNewItemName] = useState("");
-  const [newItemAmount, setNewItemAmount] = useState("");
-  const [newItemParticipants, setNewItemParticipants] = useState<string[]>([]);
-  const [isAddingItem, setIsAddingItem] = useState(false);
-  const [paidBy, setPaidBy] = useState<string>("");
-  const [partialPayments, setPartialPayments] = useState<PartialPayment[]>([]);
-  const [usePartialPayment, setUsePartialPayment] = useState(false);
-  const [discount, setDiscount] = useState<number>(0);
-  const [newItemRate, setNewItemRate] = useState("");
-  const [newItemQuantity, setNewItemQuantity] = useState("1");
-  const [useRateQuantity, setUseRateQuantity] = useState(false);
-  const [activeTab, setActiveTab] = useState("manual");
-  const [showBillScanner, setShowBillScanner] = useState(false);
-  const [showMenuScanner, setShowMenuScanner] = useState(false);
-  const [showParticipantManager, setShowParticipantManager] = useState(false);
   const tripId = new URLSearchParams(location.search).get('tripId');
-  
-  useEffect(() => {
-    if (!id) {
-      navigate("/");
-      return;
-    }
+  const [showParticipantManager, setShowParticipantManager] = useState(false);
+
+  const {
+    bill,
+    paidBy,
+    partialPayments,
+    usePartialPayment,
+    discount,
+    isLoading,
     
-    const foundBill = getBillById(id);
+    setPaidBy,
+    setUsePartialPayment,
     
-    if (foundBill) {
-      setBill(foundBill);
-      setPaidBy(foundBill.paidBy || foundBill.participants[0]?.id || "");
-      
-      if (foundBill.partialPayments && foundBill.partialPayments.length > 0) {
-        setPartialPayments(foundBill.partialPayments);
-        setUsePartialPayment(true);
-      }
-      
-      setDiscount(foundBill.discount || 0);
-      
-      if (tripId && !foundBill.tripId) {
-        const updatedBill = { ...foundBill, tripId };
-        updateBill(updatedBill);
-        setBill(updatedBill);
-      }
-    } else {
-      toast.error("Bill not found");
-      navigate("/");
-    }
-  }, [id, navigate, tripId]);
-  
-  useEffect(() => {
-    if (!usePartialPayment) {
-      setPartialPayments([]);
-    }
-  }, [usePartialPayment]);
-  
-  const handleAddItem = () => {
-    if (!bill || !newItemName.trim() || !newItemAmount || newItemParticipants.length === 0) {
-      return;
-    }
+    addItem,
+    removeItem,
+    addMenuItems,
     
-    const amount = parseFloat(newItemAmount);
-    if (isNaN(amount) || amount <= 0) {
-      return;
-    }
+    addParticipant,
+    removeParticipant,
     
-    let newItem: BillItem = {
-      id: generateId("item-"),
-      name: newItemName.trim(),
-      amount,
-      participants: newItemParticipants,
-    };
+    updatePartialPayments,
+    updateDiscount,
+    finalizePayment,
+    deleteBill,
     
-    if (useRateQuantity) {
-      newItem.rate = parseFloat(newItemRate);
-      newItem.quantity = parseFloat(newItemQuantity);
-    }
-    
-    const updatedBill = {
-      ...bill,
-      items: [...bill.items, newItem],
-      totalAmount: bill.totalAmount + amount,
-    };
-    
-    setBill(updatedBill);
-    updateBill(updatedBill);
-    
-    setNewItemName("");
-    setNewItemAmount("");
-    setNewItemParticipants([]);
-    setNewItemRate("");
-    setNewItemQuantity("1");
-    setIsAddingItem(false);
-  };
-  
-  const handleRemoveItem = (itemId: string) => {
-    if (!bill) return;
-    
-    const itemToRemove = bill.items.find(item => item.id === itemId);
-    if (!itemToRemove) return;
-    
-    const updatedBill = {
-      ...bill,
-      items: bill.items.filter(item => item.id !== itemId),
-      totalAmount: bill.totalAmount - itemToRemove.amount,
-    };
-    
-    setBill(updatedBill);
-    updateBill(updatedBill);
-  };
-  
-  const handleParticipantToggle = (participantId: string) => {
-    if (newItemParticipants.includes(participantId)) {
-      setNewItemParticipants(newItemParticipants.filter(id => id !== participantId));
-    } else {
-      setNewItemParticipants([...newItemParticipants, participantId]);
-    }
-  };
-  
-  const handleSelectAll = () => {
-    if (!bill) return;
-    
-    if (newItemParticipants.length === bill.participants.length) {
-      setNewItemParticipants([]);
-    } else {
-      setNewItemParticipants(bill.participants.map(p => p.id));
-    }
-  };
-  
-  const handlePartialPaymentsChange = (payments: PartialPayment[]) => {
-    setPartialPayments(payments);
-    if (bill) {
-      const updatedBill = {
-        ...bill,
-        partialPayments: payments
-      };
-      setBill(updatedBill);
-      updateBill(updatedBill);
-    }
-  };
-  
-  const handleDiscountChange = (discountAmount: number) => {
-    setDiscount(discountAmount);
-    if (bill) {
-      const updatedBill = {
-        ...bill,
-        discount: discountAmount
-      };
-      setBill(updatedBill);
-      updateBill(updatedBill);
-    }
-  };
-  
-  const handleToggleRateQuantity = () => {
-    setUseRateQuantity(!useRateQuantity);
-    if (!useRateQuantity) {
-      setNewItemRate(newItemAmount || "0");
-      setNewItemQuantity("1");
-    }
-  };
-  
-  const handleCalculateSplit = () => {
-    if (!bill) return;
-    
-    const totalPaid = partialPayments.reduce((sum, payment) => sum + payment.amount, 0);
-    const remainingAmount = bill.totalAmount - totalPaid - discount;
-    
-    let updatedBill: Bill = {
-      ...bill,
-      discount,
-    };
-    
-    if (usePartialPayment) {
-      updatedBill.partialPayments = partialPayments;
-      
-      if (remainingAmount > 0 && paidBy) {
-        updatedBill.paidBy = paidBy;
-      } else {
-        delete updatedBill.paidBy;
-      }
-    } else {
-      updatedBill.paidBy = paidBy;
-      if (!updatedBill.partialPayments) {
-        updatedBill.partialPayments = [];
-      }
-    }
-    
-    updateBill(updatedBill);
-    navigate(`/split-summary/${bill.id}`);
+    getRemainingAmount,
+  } = useBillManager({ 
+    billId: id, 
+    tripId, 
+    onNavigate: navigate 
+  });
+
+  const handleAddItem = (
+    name: string, 
+    amount: number, 
+    participantIds: string[],
+    rate?: number,
+    quantity?: number
+  ) => {
+    addItem(name, amount, participantIds, rate, quantity);
   };
 
-  const handleViewSummary = () => {
-    if (bill) {
-      navigate(`/split-summary/${bill.id}`);
-    }
-  };
-  
-  const handleDeleteBill = () => {
-    if (!bill) return;
-    
-    removeBill(bill.id);
-    toast.success("Bill deleted successfully");
-    
-    if (bill.tripId) {
-      navigate(`/trip/${bill.tripId}`);
-    } else {
-      navigate("/");
-    }
-  };
-  
   const handleBillScanned = (items: { name: string; amount: number }[]) => {
-    if (!bill) return;
-    
-    let newTotalAmount = bill.totalAmount;
-    const newItems = [...bill.items];
-    
-    items.forEach(item => {
-      const newItem: BillItem = {
-        id: generateId("item-"),
-        name: item.name,
-        amount: item.amount,
-        participants: bill.participants.map(p => p.id)
-      };
-      
-      newItems.push(newItem);
-      newTotalAmount += item.amount;
-    });
-    
-    const updatedBill = {
-      ...bill,
-      items: newItems,
-      totalAmount: newTotalAmount
-    };
-    
-    setBill(updatedBill);
-    updateBill(updatedBill);
+    addMenuItems(items);
   };
-  
+
   const handleMenuScanned = (items: { name: string; price: number }[]) => {
-    if (!bill) return;
-    
-    let newTotalAmount = bill.totalAmount;
-    const newItems = [...bill.items];
-    
-    items.forEach(item => {
-      const newItem: BillItem = {
-        id: generateId("item-"),
-        name: item.name,
-        amount: item.price,
-        participants: bill.participants.map(p => p.id)
-      };
-      
-      newItems.push(newItem);
-      newTotalAmount += item.price;
-    });
-    
-    const updatedBill = {
-      ...bill,
-      items: newItems,
-      totalAmount: newTotalAmount
-    };
-    
-    setBill(updatedBill);
-    updateBill(updatedBill);
-    toast.success(`Added ${items.length} items from the menu`);
+    addMenuItems(items);
   };
-  
+
   const handleMenuItemSelected = (menuItem: MenuItem) => {
     if (!bill) return;
     
-    const newItem: BillItem = {
-      id: generateId("item-"),
-      name: menuItem.name,
-      amount: menuItem.price,
-      participants: bill.participants.map(p => p.id)
-    };
-    
-    const updatedBill = {
-      ...bill,
-      items: [...bill.items, newItem],
-      totalAmount: bill.totalAmount + menuItem.price
-    };
-    
-    setBill(updatedBill);
-    updateBill(updatedBill);
+    addItem(
+      menuItem.name, 
+      menuItem.price, 
+      bill.participants.map(p => p.id)
+    );
   };
-  
+
+  const handleCalculateSplit = () => {
+    if (finalizePayment()) {
+      navigate(`/split-summary/${id}`);
+    }
+  };
+
+  const handleViewSummary = () => {
+    navigate(`/split-summary/${id}`);
+  };
+
   const handleBackToTrip = () => {
     if (bill?.tripId) {
       navigate(`/trip/${bill.tripId}`);
     }
   };
-  
-  const handleAddParticipant = (participant: Participant) => {
-    if (!bill) return;
-    
-    if (bill.participants.some(p => p.id === participant.id)) {
-      toast.error(`${participant.name} is already in this bill`);
-      return;
-    }
-    
-    const updatedBill = {
-      ...bill,
-      participants: [...bill.participants, participant]
-    };
-    
-    setBill(updatedBill);
-    updateBill(updatedBill);
-    toast.success(`${participant.name} added to this bill`);
-  };
-  
-  const handleRemoveParticipant = (id: string) => {
-    if (!bill) return;
-    
-    const isParticipantInItems = bill.items.some(item => 
-      item.participants.includes(id)
-    );
-    
-    if (isParticipantInItems) {
-      toast.error("Cannot remove participant who is part of bill items");
-      return;
-    }
-    
-    if (bill.paidBy === id) {
-      toast.error("Cannot remove participant who paid for the bill");
-      return;
-    }
-    
-    const hasPartialPayment = bill.partialPayments?.some(
-      payment => payment.payerId === id
-    );
-    
-    if (hasPartialPayment) {
-      toast.error("Cannot remove participant who has made payments");
-      return;
-    }
-    
-    const updatedBill = {
-      ...bill,
-      participants: bill.participants.filter(p => p.id !== id)
-    };
-    
-    setBill(updatedBill);
-    updateBill(updatedBill);
-    toast.success("Participant removed");
-  };
-  
-  if (!bill) {
+
+  if (isLoading || !bill) {
     return (
       <AppLayout showBackButton title="Loading...">
         <div className="flex items-center justify-center h-full py-12">
@@ -381,67 +106,39 @@ const SplitDetails: React.FC = () => {
       </AppLayout>
     );
   }
-  
-  const totalPaid = partialPayments.reduce((sum, payment) => sum + payment.amount, 0);
-  const remainingAmount = bill.totalAmount - totalPaid - discount;
-  
+
+  const remainingAmount = getRemainingAmount();
+
   return (
-    <AppLayout showBackButton title={bill?.title || "Loading..."}>
-      <div className="flex justify-between items-center pt-2">
-        {bill.tripId ? (
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="flex items-center text-muted-foreground"
-            onClick={handleBackToTrip}
-          >
-            <ArrowUp className="h-3 w-3 mr-1 rotate-315" />
-            Back to trip
-          </Button>
-        ) : (
-          <div></div>
-        )}
-        
-        <DeleteBillButton 
-          onDelete={handleDeleteBill} 
-          buttonText="Delete Bill" 
-          variant="ghost"
-        />
-      </div>
+    <AppLayout showBackButton title={bill.title}>
+      <BillHeader 
+        title={bill.title}
+        onBackToTrip={handleBackToTrip}
+        onDelete={deleteBill}
+        tripId={bill.tripId}
+        showParticipantManager={showParticipantManager}
+        onToggleParticipantManager={() => setShowParticipantManager(!showParticipantManager)}
+      />
       
-      <div className="py-6">
-        <div className="glass-panel rounded-xl p-4 mb-6">
-          <div className="flex justify-between items-center mb-2">
-            <h2 className="text-lg font-medium">Participants</h2>
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => setShowParticipantManager(!showParticipantManager)}
-            >
-              <Users className="h-4 w-4 mr-2" />
-              {showParticipantManager ? "Hide" : "Manage"}
-            </Button>
+      <div className="py-4">
+        {!showParticipantManager ? (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {bill.participants.map(participant => (
+              <div 
+                key={participant.id}
+                className="bg-muted px-3 py-1 rounded-full text-sm"
+              >
+                {participant.name}
+              </div>
+            ))}
           </div>
-          
-          {!showParticipantManager ? (
-            <div className="flex flex-wrap gap-2">
-              {bill.participants.map(participant => (
-                <div 
-                  key={participant.id}
-                  className="bg-muted px-3 py-1 rounded-full text-sm"
-                >
-                  {participant.name}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <AddParticipant
-              participants={bill.participants}
-              onAdd={handleAddParticipant}
-              onRemove={handleRemoveParticipant}
-            />
-          )}
-        </div>
+        ) : (
+          <AddParticipant
+            participants={bill.participants}
+            onAdd={addParticipant}
+            onRemove={removeParticipant}
+          />
+        )}
         
         <div className="glass-panel rounded-xl p-4 mb-6">
           <div className="flex justify-between items-center mb-4">
@@ -453,149 +150,42 @@ const SplitDetails: React.FC = () => {
           
           <BillItemList 
             items={bill.items} 
-            onRemoveItem={handleRemoveItem} 
+            onRemoveItem={removeItem} 
           />
           
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="manual">Manual</TabsTrigger>
-              <TabsTrigger value="scan">Scan Receipt</TabsTrigger>
-              <TabsTrigger value="menu">Menu</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="manual">
-              <AddBillItem 
-                isAdding={isAddingItem}
-                participants={bill.participants}
-                newItemName={newItemName}
-                newItemAmount={newItemAmount}
-                newItemParticipants={newItemParticipants}
-                onNewItemNameChange={setNewItemName}
-                onNewItemAmountChange={setNewItemAmount}
-                onParticipantToggle={handleParticipantToggle}
-                onSelectAll={handleSelectAll}
-                onAdd={handleAddItem}
-                onCancel={() => setIsAddingItem(!isAddingItem)}
-                newItemRate={newItemRate}
-                newItemQuantity={newItemQuantity}
-                onNewItemRateChange={setNewItemRate}
-                onNewItemQuantityChange={setNewItemQuantity}
-                useRateQuantity={useRateQuantity}
-                onToggleRateQuantity={handleToggleRateQuantity}
-              />
-            </TabsContent>
-            
-            <TabsContent value="scan">
-              <div className="p-4 border rounded-md mt-3">
-                <div className="flex space-x-2">
-                  <Button 
-                    variant="outline" 
-                    className="w-full py-6 flex items-center justify-center gap-2"
-                    onClick={() => setShowBillScanner(true)}
-                  >
-                    <Receipt className="h-5 w-5" />
-                    Scan Receipt
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="w-full py-6 flex items-center justify-center gap-2"
-                    onClick={() => setShowMenuScanner(true)}
-                  >
-                    <Camera className="h-5 w-5" />
-                    Scan Menu
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground text-center mt-2">
-                  Use OCR to automatically extract items from receipts or menus
-                </p>
-              </div>
-              <BillScanner 
-                isOpen={showBillScanner}
-                onClose={() => setShowBillScanner(false)}
-                onBillProcessed={handleBillScanned}
-              />
-              <MenuScanner
-                isOpen={showMenuScanner}
-                onClose={() => setShowMenuScanner(false)}
-                onMenuProcessed={handleMenuScanned}
-              />
-            </TabsContent>
-            
-            <TabsContent value="menu">
-              <div className="mt-3">
-                <MenuSelector onMenuItemSelected={handleMenuItemSelected} />
-              </div>
-            </TabsContent>
-          </Tabs>
+          <BillItemEntry 
+            participants={bill.participants}
+            onAddItem={handleAddItem}
+            onBillScanned={handleBillScanned}
+            onMenuScanned={handleMenuScanned}
+            onMenuItemSelected={handleMenuItemSelected}
+          />
         </div>
         
         <DiscountInput 
           totalAmount={bill.totalAmount}
           discount={discount}
-          onDiscountChange={handleDiscountChange}
+          onDiscountChange={updateDiscount}
         />
         
-        <div className="glass-panel rounded-xl p-4 mb-6">
-          <h2 className="text-lg font-medium mb-3">Payment Method</h2>
-          <div className="flex space-x-2 mb-4">
-            <Button
-              variant={!usePartialPayment ? "default" : "outline"}
-              className="flex-1"
-              onClick={() => setUsePartialPayment(false)}
-            >
-              Single Payer
-            </Button>
-            <Button
-              variant={usePartialPayment ? "default" : "outline"}
-              className="flex-1"
-              onClick={() => setUsePartialPayment(true)}
-            >
-              Multiple Payers
-            </Button>
-          </div>
-        </div>
+        <PaymentMethodSelector 
+          participants={bill.participants}
+          paidBy={paidBy}
+          usePartialPayment={usePartialPayment}
+          partialPayments={partialPayments}
+          totalAmount={bill.totalAmount}
+          remainingAmount={remainingAmount}
+          discount={discount}
+          onPaidByChange={setPaidBy}
+          onUsePartialPaymentChange={setUsePartialPayment}
+          onPartialPaymentsChange={updatePartialPayments}
+        />
         
-        {usePartialPayment ? (
-          <PartialPaymentManager 
-            participants={bill.participants}
-            partialPayments={partialPayments}
-            totalAmount={bill.totalAmount - discount}
-            onPartialPaymentsChange={handlePartialPaymentsChange}
-          />
-        ) : (
-          <PaidBySelector 
-            participants={bill.participants}
-            paidBy={paidBy}
-            onPaidByChange={setPaidBy}
-          />
-        )}
-        
-        {usePartialPayment && remainingAmount > 0 && (
-          <PaidBySelector 
-            participants={bill.participants}
-            paidBy={paidBy}
-            onPaidByChange={setPaidBy}
-          />
-        )}
-        
-        <div className="flex space-x-2 mt-6">
-          <Button 
-            className="flex-1 py-6"
-            onClick={handleCalculateSplit}
-            disabled={bill?.items.length === 0}
-          >
-            Calculate Split
-          </Button>
-          
-          <Button 
-            className="flex-1 py-6"
-            variant="outline"
-            onClick={handleViewSummary}
-            disabled={bill?.items.length === 0}
-          >
-            View Summary
-          </Button>
-        </div>
+        <BillActions 
+          hasItems={bill.items.length > 0}
+          onCalculateSplit={handleCalculateSplit}
+          onViewSummary={handleViewSummary}
+        />
       </div>
     </AppLayout>
   );
