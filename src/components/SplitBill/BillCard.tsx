@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { memo } from "react";
 import { motion } from "framer-motion";
 import { Edit, Trash2, Users, Check, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -17,7 +17,8 @@ interface BillCardProps {
   settled?: boolean;
 }
 
-const BillCard: React.FC<BillCardProps> = ({ 
+// Using memo to prevent unnecessary re-renders
+const BillCard: React.FC<BillCardProps> = memo(({ 
   bill, 
   index, 
   onClick, 
@@ -160,6 +161,9 @@ const BillCard: React.FC<BillCardProps> = ({
       </div>
     </motion.div>
   );
-};
+});
+
+// Add display name for better debugging
+BillCard.displayName = "BillCard";
 
 export default BillCard;

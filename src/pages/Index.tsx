@@ -16,8 +16,6 @@ import { useLanguage } from "@/components/LanguageProvider";
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const [bills, setBills] = useState<Bill[]>([]);
-  const [activeBills, setActiveBills] = useState<Bill[]>([]);
-  const [settledBills, setSettledBills] = useState<Bill[]>([]);
   const [activeTab, setActiveTab] = useState("active");
   const [showGuide, setShowGuide] = useState(false);
   const isMobile = useIsMobile();
@@ -40,22 +38,6 @@ const HomePage: React.FC = () => {
     });
     
     setBills(enhancedBills);
-
-    const active: Bill[] = [];
-    const settled: Bill[] = [];
-
-    enhancedBills.forEach(bill => {
-      const isFullySettled = bill.settlements?.every(settlement => settlement.settled) ?? false;
-      
-      if (isFullySettled && bill.settlements && bill.settlements.length > 0) {
-        settled.push(bill);
-      } else {
-        active.push(bill);
-      }
-    });
-
-    setActiveBills(active);
-    setSettledBills(settled);
   }, []);
 
   // Add currency change event listener to refresh bills when currency changes
@@ -81,22 +63,40 @@ const HomePage: React.FC = () => {
     }
   }, [loadBills]);
 
-  const handleViewBill = (billId: string) => {
-    navigate(`/split-details/${billId}`);
-  };
+  // Memoize filtered bills to prevent recalculations
+  const { activeBills, settledBills } = useMemo(() => {
+    const active: Bill[] = [];
+    const settled: Bill[] = [];
 
-  const handleEditBill = (billId: string) => {
-    navigate(`/split-details/${billId}`);
-  };
+    bills.forEach(bill => {
+      const isFullySettled = bill.settlements?.every(settlement => settlement.settled) ?? false;
+      
+      if (isFullySettled && bill.settlements && bill.settlements.length > 0) {
+        settled.push(bill);
+      } else {
+        active.push(bill);
+      }
+    });
 
-  const handleDeleteBill = (billId: string) => {
+    return { activeBills: active, settledBills: settled };
+  }, [bills]);
+
+  const handleViewBill = useCallback((billId: string) => {
+    navigate(`/split-details/${billId}`);
+  }, [navigate]);
+
+  const handleEditBill = useCallback((billId: string) => {
+    navigate(`/split-details/${billId}`);
+  }, [navigate]);
+
+  const handleDeleteBill = useCallback((billId: string) => {
     deleteBill(billId);
     loadBills();
-  };
+  }, [loadBills]);
 
-  const handleCloseGuide = () => {
+  const handleCloseGuide = useCallback(() => {
     setShowGuide(false);
-  };
+  }, []);
 
   return (
     <AppLayout title="कति भो बिल ?">

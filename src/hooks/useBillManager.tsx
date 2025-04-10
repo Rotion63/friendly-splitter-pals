@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Bill, BillItem, PartialPayment, Participant, MenuItem } from "@/lib/types";
 import { generateId } from "@/lib/utils";
 import { getBillById, updateBill, saveBill, removeBill } from "@/lib/billStorage";
@@ -18,14 +18,16 @@ export function useBillManager({ billId, tripId, onNavigate }: UseBillManagerPro
   const [usePartialPayment, setUsePartialPayment] = useState(false);
   const [discount, setDiscount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Load bill on mount
-  useEffect(() => {
+  // Load bill on mount - using useCallback to prevent recreation on each render
+  const loadBill = useCallback(() => {
     if (!billId) {
       onNavigate("/");
       return;
     }
     
+    setIsLoading(true);
     const foundBill = getBillById(billId);
     
     if (foundBill) {
@@ -35,10 +37,14 @@ export function useBillManager({ billId, tripId, onNavigate }: UseBillManagerPro
       if (foundBill.partialPayments && foundBill.partialPayments.length > 0) {
         setPartialPayments(foundBill.partialPayments);
         setUsePartialPayment(true);
+      } else {
+        setPartialPayments([]);
+        setUsePartialPayment(false);
       }
       
       setDiscount(foundBill.discount || 0);
       
+      // Associate bill with trip if needed
       if (tripId && !foundBill.tripId) {
         const updatedBill = { ...foundBill, tripId };
         updateBill(updatedBill);
@@ -51,6 +57,11 @@ export function useBillManager({ billId, tripId, onNavigate }: UseBillManagerPro
     
     setIsLoading(false);
   }, [billId, onNavigate, tripId]);
+
+  // Initial load
+  useEffect(() => {
+    loadBill();
+  }, [loadBill]);
   
   // Reset partial payments when toggling use partial payment
   useEffect(() => {
@@ -59,8 +70,22 @@ export function useBillManager({ billId, tripId, onNavigate }: UseBillManagerPro
     }
   }, [usePartialPayment]);
 
+  // Save bill with debounce to prevent too many saves
+  const saveBillWithDebounce = useCallback((updatedBill: Bill) => {
+    if (isSaving) return;
+    
+    setIsSaving(true);
+    setBill(updatedBill);
+    updateBill(updatedBill);
+    
+    // Reset saving state after a small delay
+    setTimeout(() => {
+      setIsSaving(false);
+    }, 300);
+  }, [isSaving]);
+
   // Item management
-  const addItem = (
+  const addItem = useCallback((
     newItemName: string, 
     newItemAmount: number, 
     newItemParticipants: string[],
@@ -68,7 +93,7 @@ export function useBillManager({ billId, tripId, onNavigate }: UseBillManagerPro
     newItemQuantity?: number
   ) => {
     if (!bill || !newItemName.trim() || isNaN(newItemAmount) || newItemAmount <= 0 || newItemParticipants.length === 0) {
-      return;
+      return false;
     }
     
     let newItem: BillItem = {
@@ -89,13 +114,11 @@ export function useBillManager({ billId, tripId, onNavigate }: UseBillManagerPro
       totalAmount: bill.totalAmount + newItemAmount,
     };
     
-    setBill(updatedBill);
-    updateBill(updatedBill);
-    
+    saveBillWithDebounce(updatedBill);
     return true;
-  };
+  }, [bill, saveBillWithDebounce]);
   
-  const removeItem = (itemId: string) => {
+  const removeItem = useCallback((itemId: string) => {
     if (!bill) return;
     
     const itemToRemove = bill.items.find(item => item.id === itemId);
@@ -107,19 +130,18 @@ export function useBillManager({ billId, tripId, onNavigate }: UseBillManagerPro
       totalAmount: bill.totalAmount - itemToRemove.amount,
     };
     
-    setBill(updatedBill);
-    updateBill(updatedBill);
-  };
+    saveBillWithDebounce(updatedBill);
+  }, [bill, saveBillWithDebounce]);
   
-  const addMenuItems = (menuItems: MenuItem[] | { name: string; price: number }[]) => {
-    if (!bill) return;
+  const addMenuItems = useCallback((menuItems: MenuItem[] | { name: string; price: number }[]) => {
+    if (!bill) return false;
     
     let newTotalAmount = bill.totalAmount;
     const newItems = [...bill.items];
     
     menuItems.forEach(item => {
-      // Correctly handle both types of objects
-      const itemPrice = 'price' in item ? item.price : ('amount' in item ? (item as any).amount : 0);
+      // Handle both MenuItem objects and scanned item objects
+      const itemPrice = 'price' in item ? item.price : 0;
       
       const newItem: BillItem = {
         id: generateId("item-"),
@@ -138,14 +160,13 @@ export function useBillManager({ billId, tripId, onNavigate }: UseBillManagerPro
       totalAmount: newTotalAmount
     };
     
-    setBill(updatedBill);
-    updateBill(updatedBill);
+    saveBillWithDebounce(updatedBill);
     return true;
-  };
+  }, [bill, saveBillWithDebounce]);
 
   // Participant management
-  const addParticipant = (participant: Participant) => {
-    if (!bill) return;
+  const addParticipant = useCallback((participant: Participant) => {
+    if (!bill) return false;
     
     if (bill.participants.some(p => p.id === participant.id)) {
       toast.error(`${participant.name} is already in this bill`);
@@ -157,14 +178,13 @@ export function useBillManager({ billId, tripId, onNavigate }: UseBillManagerPro
       participants: [...bill.participants, participant]
     };
     
-    setBill(updatedBill);
-    updateBill(updatedBill);
+    saveBillWithDebounce(updatedBill);
     toast.success(`${participant.name} added to this bill`);
     return true;
-  };
+  }, [bill, saveBillWithDebounce]);
   
-  const removeParticipant = (id: string) => {
-    if (!bill) return;
+  const removeParticipant = useCallback((id: string) => {
+    if (!bill) return false;
     
     const isParticipantInItems = bill.items.some(item => 
       item.participants.includes(id)
@@ -194,39 +214,38 @@ export function useBillManager({ billId, tripId, onNavigate }: UseBillManagerPro
       participants: bill.participants.filter(p => p.id !== id)
     };
     
-    setBill(updatedBill);
-    updateBill(updatedBill);
+    saveBillWithDebounce(updatedBill);
     toast.success("Participant removed");
     return true;
-  };
+  }, [bill, saveBillWithDebounce]);
 
   // Payment handling
-  const updatePartialPayments = (payments: PartialPayment[]) => {
-    setPartialPayments(payments);
-    if (bill) {
-      const updatedBill = {
-        ...bill,
-        partialPayments: payments
-      };
-      setBill(updatedBill);
-      updateBill(updatedBill);
-    }
-  };
-  
-  const updateDiscount = (discountAmount: number) => {
-    setDiscount(discountAmount);
-    if (bill) {
-      const updatedBill = {
-        ...bill,
-        discount: discountAmount
-      };
-      setBill(updatedBill);
-      updateBill(updatedBill);
-    }
-  };
-  
-  const finalizePayment = () => {
+  const updatePartialPayments = useCallback((payments: PartialPayment[]) => {
     if (!bill) return;
+    
+    const updatedBill = {
+      ...bill,
+      partialPayments: payments
+    };
+    
+    setPartialPayments(payments);
+    saveBillWithDebounce(updatedBill);
+  }, [bill, saveBillWithDebounce]);
+  
+  const updateDiscount = useCallback((discountAmount: number) => {
+    if (!bill) return;
+    
+    const updatedBill = {
+      ...bill,
+      discount: discountAmount
+    };
+    
+    setDiscount(discountAmount);
+    saveBillWithDebounce(updatedBill);
+  }, [bill, saveBillWithDebounce]);
+  
+  const finalizePayment = useCallback(() => {
+    if (!bill) return false;
     
     const totalPaid = partialPayments.reduce((sum, payment) => sum + payment.amount, 0);
     const remainingAmount = bill.totalAmount - totalPaid - discount;
@@ -246,16 +265,14 @@ export function useBillManager({ billId, tripId, onNavigate }: UseBillManagerPro
       }
     } else {
       updatedBill.paidBy = paidBy;
-      if (!updatedBill.partialPayments) {
-        updatedBill.partialPayments = [];
-      }
+      updatedBill.partialPayments = [];
     }
     
     updateBill(updatedBill);
     return true;
-  };
+  }, [bill, discount, partialPayments, paidBy, usePartialPayment]);
   
-  const deleteBill = () => {
+  const deleteBill = useCallback(() => {
     if (!bill) return;
     
     removeBill(bill.id);
@@ -266,15 +283,15 @@ export function useBillManager({ billId, tripId, onNavigate }: UseBillManagerPro
     } else {
       onNavigate("/");
     }
-  };
+  }, [bill, onNavigate]);
 
   // Calculate remaining amount
-  const getRemainingAmount = () => {
+  const getRemainingAmount = useCallback(() => {
     if (!bill) return 0;
     
     const totalPaid = partialPayments.reduce((sum, payment) => sum + payment.amount, 0);
     return bill.totalAmount - totalPaid - discount;
-  };
+  }, [bill, partialPayments, discount]);
 
   return {
     bill,

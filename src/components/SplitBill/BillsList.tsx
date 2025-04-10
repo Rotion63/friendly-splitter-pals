@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { memo } from "react";
 import { Bill } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,8 @@ interface BillsListProps {
   onDeleteBill: (billId: string) => void;
 }
 
-const BillsList: React.FC<BillsListProps> = ({ 
+// Using memo to prevent unnecessary re-renders
+const BillsList: React.FC<BillsListProps> = memo(({ 
   bills, 
   onEditBill, 
   onViewBill, 
@@ -88,6 +89,9 @@ const BillsList: React.FC<BillsListProps> = ({
       })}
     </div>
   );
-};
+});
+
+// Add display name for better debugging
+BillsList.displayName = "BillsList";
 
 export default BillsList;

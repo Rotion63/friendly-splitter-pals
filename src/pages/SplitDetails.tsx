@@ -1,8 +1,8 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
-import { MenuItem, Participant } from "@/lib/types";
+import { MenuItem } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import { useBillManager } from "@/hooks/useBillManager";
 import { getTripById } from "@/lib/tripStorage";
@@ -52,8 +52,8 @@ const SplitDetails: React.FC = () => {
     onNavigate: navigate 
   });
 
-  // Load trip details if bill has a tripId
-  useEffect(() => {
+  // Load trip details if bill has a tripId - using useCallback to prevent recreation
+  const loadTripDetails = useCallback(() => {
     if (bill?.tripId) {
       const trip = getTripById(bill.tripId);
       if (trip) {
@@ -61,11 +61,20 @@ const SplitDetails: React.FC = () => {
           id: trip.id,
           name: trip.name
         });
+      } else {
+        setTripDetails(null);
       }
+    } else {
+      setTripDetails(null);
     }
   }, [bill?.tripId]);
 
-  const handleAddItem = (
+  // Load trip details when bill changes
+  useEffect(() => {
+    loadTripDetails();
+  }, [loadTripDetails]);
+
+  const handleAddItem = useCallback((
     name: string, 
     amount: number, 
     participantIds: string[],
@@ -73,23 +82,18 @@ const SplitDetails: React.FC = () => {
     quantity?: number
   ) => {
     addItem(name, amount, participantIds, rate, quantity);
-  };
+  }, [addItem]);
 
-  const handleBillScanned = (items: { name: string; amount: number }[]) => {
-    // Convert the scanned items to the expected format
-    const convertedItems = items.map(item => ({
-      name: item.name,
-      price: item.amount // Map amount to price
-    }));
-    
-    addMenuItems(convertedItems);
-  };
-
-  const handleMenuScanned = (items: { name: string; price: number }[]) => {
+  const handleBillScanned = useCallback((items: { name: string; price: number }[]) => {
+    // Convert format to match what addMenuItems expects
     addMenuItems(items);
-  };
+  }, [addMenuItems]);
 
-  const handleMenuItemSelected = (menuItem: MenuItem) => {
+  const handleMenuScanned = useCallback((items: { name: string; price: number }[]) => {
+    addMenuItems(items);
+  }, [addMenuItems]);
+
+  const handleMenuItemSelected = useCallback((menuItem: MenuItem) => {
     if (!bill) return;
     
     addItem(
@@ -97,24 +101,25 @@ const SplitDetails: React.FC = () => {
       menuItem.price, 
       bill.participants.map(p => p.id)
     );
-  };
+  }, [bill, addItem]);
 
-  const handleCalculateSplit = () => {
+  const handleCalculateSplit = useCallback(() => {
     if (finalizePayment()) {
       navigate(`/split-summary/${id}`);
     }
-  };
+  }, [finalizePayment, navigate, id]);
 
-  const handleViewSummary = () => {
+  const handleViewSummary = useCallback(() => {
     navigate(`/split-summary/${id}`);
-  };
+  }, [navigate, id]);
 
-  const handleBackToTrip = () => {
+  const handleBackToTrip = useCallback(() => {
     if (bill?.tripId) {
       navigate(`/trip/${bill.tripId}`);
     }
-  };
+  }, [bill?.tripId, navigate]);
 
+  // Loading state
   if (isLoading || !bill) {
     return (
       <AppLayout showBackButton title="Loading...">
