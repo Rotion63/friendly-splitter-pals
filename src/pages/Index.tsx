@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
@@ -9,6 +9,7 @@ import UserGuide from "@/components/SplitBill/UserGuide";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Bill } from "@/lib/types";
 import { getBills, deleteBill } from "@/lib/billStorage";
+import { getTripById } from "@/lib/tripStorage";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLanguage } from "@/components/LanguageProvider";
 
@@ -22,37 +23,28 @@ const HomePage: React.FC = () => {
   const isMobile = useIsMobile();
   const { t } = useLanguage();
 
-  // Add currency change event listener to refresh bills when currency changes
-  useEffect(() => {
-    const handleCurrencyChange = () => {
-      loadBills();
-    };
-    
-    window.addEventListener('currency-changed', handleCurrencyChange);
-    return () => {
-      window.removeEventListener('currency-changed', handleCurrencyChange);
-    };
-  }, []);
-
-  useEffect(() => {
-    loadBills();
-
-    // Check if this is the first time opening the app
-    const hasSeenGuide = localStorage.getItem('hasSeenGuide');
-    if (!hasSeenGuide) {
-      setShowGuide(true);
-      localStorage.setItem('hasSeenGuide', 'true');
-    }
-  }, []);
-
-  const loadBills = () => {
+  // Memoized bill loading function to prevent unnecessary reloads
+  const loadBills = useCallback(() => {
     const loadedBills = getBills();
-    setBills(loadedBills);
+    
+    // Enhance bills with trip names
+    const enhancedBills = loadedBills.map(bill => {
+      if (bill.tripId) {
+        const trip = getTripById(bill.tripId);
+        return {
+          ...bill,
+          tripName: trip?.name || ''
+        };
+      }
+      return bill;
+    });
+    
+    setBills(enhancedBills);
 
     const active: Bill[] = [];
     const settled: Bill[] = [];
 
-    loadedBills.forEach(bill => {
+    enhancedBills.forEach(bill => {
       const isFullySettled = bill.settlements?.every(settlement => settlement.settled) ?? false;
       
       if (isFullySettled && bill.settlements && bill.settlements.length > 0) {
@@ -64,7 +56,30 @@ const HomePage: React.FC = () => {
 
     setActiveBills(active);
     setSettledBills(settled);
-  };
+  }, []);
+
+  // Add currency change event listener to refresh bills when currency changes
+  useEffect(() => {
+    const handleCurrencyChange = () => {
+      loadBills();
+    };
+    
+    window.addEventListener('currency-changed', handleCurrencyChange);
+    return () => {
+      window.removeEventListener('currency-changed', handleCurrencyChange);
+    };
+  }, [loadBills]);
+
+  useEffect(() => {
+    loadBills();
+
+    // Check if this is the first time opening the app
+    const hasSeenGuide = localStorage.getItem('hasSeenGuide');
+    if (!hasSeenGuide) {
+      setShowGuide(true);
+      localStorage.setItem('hasSeenGuide', 'true');
+    }
+  }, [loadBills]);
 
   const handleViewBill = (billId: string) => {
     navigate(`/split-details/${billId}`);
@@ -101,9 +116,10 @@ const HomePage: React.FC = () => {
           </TabsList>
           
           <TabsContent value="active" className="mt-4">
-            <AnimatePresence>
+            <AnimatePresence mode="wait">
               {activeBills.length === 0 ? (
                 <motion.div
+                  key="no-active-bills"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
@@ -113,6 +129,7 @@ const HomePage: React.FC = () => {
                 </motion.div>
               ) : (
                 <motion.div
+                  key="active-bills-list"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
@@ -134,9 +151,10 @@ const HomePage: React.FC = () => {
           </TabsContent>
           
           <TabsContent value="settled" className="mt-4">
-            <AnimatePresence>
+            <AnimatePresence mode="wait">
               {settledBills.length === 0 ? (
                 <motion.div
+                  key="no-settled-bills"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
@@ -146,6 +164,7 @@ const HomePage: React.FC = () => {
                 </motion.div>
               ) : (
                 <motion.div
+                  key="settled-bills-list"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}

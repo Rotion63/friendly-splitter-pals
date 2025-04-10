@@ -1,10 +1,11 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { MenuItem, Participant } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import { useBillManager } from "@/hooks/useBillManager";
+import { getTripById } from "@/lib/tripStorage";
 import BillItemList from "@/components/SplitBill/BillItemList";
 import AddParticipant from "@/components/SplitBill/AddParticipant";
 import DiscountInput from "@/components/SplitBill/DiscountInput";
@@ -19,6 +20,7 @@ const SplitDetails: React.FC = () => {
   const location = useLocation();
   const tripId = new URLSearchParams(location.search).get('tripId');
   const [showParticipantManager, setShowParticipantManager] = useState(false);
+  const [tripDetails, setTripDetails] = useState<{ id: string, name: string } | null>(null);
 
   const {
     bill,
@@ -49,6 +51,19 @@ const SplitDetails: React.FC = () => {
     tripId, 
     onNavigate: navigate 
   });
+
+  // Load trip details if bill has a tripId
+  useEffect(() => {
+    if (bill?.tripId) {
+      const trip = getTripById(bill.tripId);
+      if (trip) {
+        setTripDetails({
+          id: trip.id,
+          name: trip.name
+        });
+      }
+    }
+  }, [bill?.tripId]);
 
   const handleAddItem = (
     name: string, 

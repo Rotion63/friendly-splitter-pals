@@ -1,64 +1,89 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowUp, Users } from "lucide-react";
-import DeleteBillButton from "./DeleteBillButton";
+import { ArrowLeft, Trash2, Users, MapPin } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { getTripById } from "@/lib/tripStorage";
 
 interface BillHeaderProps {
   title: string;
-  onBackToTrip?: () => void;
+  onBackToTrip: () => void;
   onDelete: () => void;
   tripId?: string;
   showParticipantManager: boolean;
   onToggleParticipantManager: () => void;
 }
 
-const BillHeader: React.FC<BillHeaderProps> = ({
-  title,
-  onBackToTrip,
+const BillHeader: React.FC<BillHeaderProps> = ({ 
+  title, 
+  onBackToTrip, 
   onDelete,
   tripId,
   showParticipantManager,
   onToggleParticipantManager
 }) => {
+  const trip = tripId ? getTripById(tripId) : null;
+  
   return (
-    <>
-      <div className="flex justify-between items-center pt-2">
-        {tripId ? (
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="flex items-center text-muted-foreground"
-            onClick={onBackToTrip}
-          >
-            <ArrowUp className="h-3 w-3 mr-1 rotate-315" />
-            Back to trip
-          </Button>
-        ) : (
-          <div></div>
-        )}
+    <div className="mb-4">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">{title}</h1>
         
-        <DeleteBillButton 
-          onDelete={onDelete} 
-          buttonText="Delete Bill" 
-          variant="ghost"
-        />
-      </div>
-      
-      <div className="glass-panel rounded-xl p-4 mb-6 mt-4">
-        <div className="flex justify-between items-center mb-2">
-          <h2 className="text-lg font-medium">Participants</h2>
-          <Button 
-            variant="ghost" 
+        <div className="flex gap-2">
+          <Button
+            variant="ghost"
             size="sm"
             onClick={onToggleParticipantManager}
           >
-            <Users className="h-4 w-4 mr-2" />
-            {showParticipantManager ? "Hide" : "Manage"}
+            <Users className="h-4 w-4 mr-1" />
+            {showParticipantManager ? "Done" : "Participants"}
           </Button>
+          
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive"
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Delete
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Bill</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete this bill? This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={onDelete}
+                  className="bg-destructive hover:bg-destructive/90"
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
-    </>
+      
+      {trip && (
+        <div 
+          className="flex items-center text-primary cursor-pointer mt-1"
+          onClick={onBackToTrip}
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          <div className="flex items-center">
+            <MapPin className="h-3.5 w-3.5 mr-1" />
+            <span>Back to {trip.name}</span>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

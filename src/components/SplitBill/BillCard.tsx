@@ -1,7 +1,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Edit, Trash2, Users, Check } from "lucide-react";
+import { Edit, Trash2, Users, Check, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Bill } from "@/lib/types";
 import { formatAmount, getActiveCurrency } from "@/lib/utils";
@@ -50,6 +50,7 @@ const BillCard: React.FC<BillCardProps> = ({
   };
   
   const participantCount = bill.participants?.length || 0;
+  const tripName = (bill as any).tripName || bill.tripId ? 'Part of a trip' : '';
   
   return (
     <motion.div
@@ -81,6 +82,13 @@ const BillCard: React.FC<BillCardProps> = ({
             {bill.date ? new Date(bill.date).toLocaleDateString() : "No date"}
             {bill.place && ` • ${bill.place}`}
           </p>
+          
+          {tripName && (
+            <p className="text-xs flex items-center text-primary/70 mt-1">
+              <MapPin className="h-3 w-3 mr-1" />
+              {tripName}
+            </p>
+          )}
         </div>
         
         <div className="flex gap-1">
