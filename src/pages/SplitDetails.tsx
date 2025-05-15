@@ -84,13 +84,20 @@ const SplitDetails: React.FC = () => {
     addItem(name, amount, participantIds, rate, quantity);
   }, [addItem]);
 
-  const handleBillScanned = useCallback((items: { name: string; price: number }[]) => {
-    // Convert format to match what addMenuItems expects
+  // Modified to handle both price and amount properties
+  const handleBillScanned = useCallback((items: { name: string; amount: number }[]) => {
+    // Format is already correct for addMenuItems
     addMenuItems(items);
   }, [addMenuItems]);
 
+  // Create adapter for menu scanned items
   const handleMenuScanned = useCallback((items: { name: string; price: number }[]) => {
-    addMenuItems(items);
+    // Convert price to amount format expected by addMenuItems
+    const formattedItems = items.map(item => ({
+      name: item.name,
+      amount: item.price
+    }));
+    addMenuItems(formattedItems);
   }, [addMenuItems]);
 
   const handleMenuItemSelected = useCallback((menuItem: MenuItem) => {

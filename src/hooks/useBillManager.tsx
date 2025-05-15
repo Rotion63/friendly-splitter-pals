@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { Bill, BillItem, PartialPayment, Participant, MenuItem } from "@/lib/types";
 import { generateId } from "@/lib/utils";
@@ -133,15 +132,16 @@ export function useBillManager({ billId, tripId, onNavigate }: UseBillManagerPro
     saveBillWithDebounce(updatedBill);
   }, [bill, saveBillWithDebounce]);
   
-  const addMenuItems = useCallback((menuItems: MenuItem[] | { name: string; price: number }[]) => {
+  // Updated to handle both price and amount properties
+  const addMenuItems = useCallback((menuItems: MenuItem[] | { name: string; price: number }[] | { name: string; amount: number }[]) => {
     if (!bill) return false;
     
     let newTotalAmount = bill.totalAmount;
     const newItems = [...bill.items];
     
     menuItems.forEach(item => {
-      // Handle both MenuItem objects and scanned item objects
-      const itemPrice = 'price' in item ? item.price : 0;
+      // Handle both price and amount properties
+      const itemPrice = 'price' in item ? item.price : ('amount' in item ? item.amount : 0);
       
       const newItem: BillItem = {
         id: generateId("item-"),
