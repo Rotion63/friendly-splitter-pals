@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,11 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import UserGuide from "@/components/SplitBill/UserGuide";
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun, Play, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTheme } from "@/components/ThemeProvider";
 import { useLanguage } from "@/components/LanguageProvider";
+import { useTutorial } from "@/components/TutorialProvider";
 
 const Settings: React.FC = () => {
   const [showGuide, setShowGuide] = useState(false);
@@ -19,6 +19,7 @@ const Settings: React.FC = () => {
   const { theme, setTheme } = useTheme();
   const isMobile = useIsMobile();
   const { isNepaliLanguage, toggleLanguage, t } = useLanguage();
+  const { startTutorial } = useTutorial();
   
   const toggleDarkMode = () => {
     setTheme(theme === "light" ? "dark" : "light");
@@ -98,17 +99,37 @@ const Settings: React.FC = () => {
           <TabsContent value="help" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>{t("How to Use", "प्रयोग गर्ने विधि")}</CardTitle>
+                <CardTitle>{t("Interactive Tutorial", "अन्तरक्रियात्मक ट्यूटोरियल")}</CardTitle>
                 <CardDescription>
-                  {t("Learn how to use this application", "यो एप्लिकेसन कसरी प्रयोग गर्ने भनेर सिक्नुहोस्")}
+                  {t("Step-by-step guide to learn how to use this app", "यो एप प्रयोग गर्न सिक्न चरणबद्ध गाइड")}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button 
+                  onClick={startTutorial}
+                  className="w-full gap-2"
+                >
+                  <Play className="h-4 w-4" />
+                  {t("Start Interactive Tutorial", "अन्तरक्रियात्मक ट्यूटोरियल सुरु गर्नुहोस्")}
+                </Button>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>{t("Quick Reference", "द्रुत सन्दर्भ")}</CardTitle>
+                <CardDescription>
+                  {t("Overview of app features", "एप सुविधाहरूको अवलोकन")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <Button 
                   onClick={() => setShowGuide(true)}
-                  className="w-full"
+                  variant="outline"
+                  className="w-full gap-2"
                 >
-                  {t("Show User Guide", "प्रयोगकर्ता गाइड देखाउनुहोस्")}
+                  <BookOpen className="h-4 w-4" />
+                  {t("Show Quick Guide", "द्रुत गाइड देखाउनुहोस्")}
                 </Button>
               </CardContent>
             </Card>

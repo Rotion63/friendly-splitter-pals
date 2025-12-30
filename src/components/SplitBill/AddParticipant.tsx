@@ -32,7 +32,7 @@ const AddParticipant: React.FC<AddParticipantProps> = ({
   };
 
   return (
-    <div className="mb-6">
+    <div className="mb-6" data-tutorial="add-participant-section">
       <h2 className="text-lg font-medium mb-3">Participants</h2>
       
       <div className="space-y-3">
@@ -87,6 +87,7 @@ const AddParticipant: React.FC<AddParticipantProps> = ({
                 placeholder="Enter name"
                 className="flex-1"
                 autoFocus
+                data-tutorial="participant-name-input"
               />
               <Button onClick={handleAdd} disabled={!newName.trim()}>Add</Button>
               <Button 

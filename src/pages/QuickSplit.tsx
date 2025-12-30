@@ -170,6 +170,7 @@ const QuickSplit: React.FC = () => {
               placeholder={t("e.g., Dinner, Vacation, Groceries", "जस्तै, डिनर, छुट्टी, किराना")}
               className="text-lg"
               required
+              data-tutorial="split-title-input"
             />
           </div>
           
@@ -297,6 +298,7 @@ const QuickSplit: React.FC = () => {
               type="submit" 
               className="flex-1 py-6 text-lg"
               disabled={!title.trim() || participants.length < 2}
+              data-tutorial="continue-button"
             >
               <FileText className="h-5 w-5 mr-2" />
               {t("Continue Manually", "म्यानुअल रूपमा जारी राख्नुहोस्")}
