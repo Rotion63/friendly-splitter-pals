@@ -1,11 +1,9 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/AppLayout";
 import BillCard from "@/components/SplitBill/BillCard";
 import NewSplitButton from "@/components/SplitBill/NewSplitButton";
-import UserGuide from "@/components/SplitBill/UserGuide";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Bill } from "@/lib/types";
 import { getBills, deleteBill } from "@/lib/billStorage";
@@ -17,7 +15,6 @@ const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const [bills, setBills] = useState<Bill[]>([]);
   const [activeTab, setActiveTab] = useState("active");
-  const [showGuide, setShowGuide] = useState(false);
   const isMobile = useIsMobile();
   const { t } = useLanguage();
 
@@ -54,13 +51,6 @@ const HomePage: React.FC = () => {
 
   useEffect(() => {
     loadBills();
-
-    // Check if this is the first time opening the app
-    const hasSeenGuide = localStorage.getItem('hasSeenGuide');
-    if (!hasSeenGuide) {
-      setShowGuide(true);
-      localStorage.setItem('hasSeenGuide', 'true');
-    }
   }, [loadBills]);
 
   // Memoize filtered bills to prevent recalculations
@@ -94,9 +84,6 @@ const HomePage: React.FC = () => {
     loadBills();
   }, [loadBills]);
 
-  const handleCloseGuide = useCallback(() => {
-    setShowGuide(false);
-  }, []);
 
   return (
     <AppLayout title="कति भो बिल ?">
@@ -189,15 +176,6 @@ const HomePage: React.FC = () => {
         
         <NewSplitButton />
 
-        {showGuide && (
-          <div className={`fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 ${isMobile ? 'h-[calc(100vh-4rem)]' : ''}`}>
-            <div className="bg-background rounded-lg max-w-lg w-full max-h-[80vh] overflow-auto">
-              <div className="p-4">
-                <UserGuide onDismiss={handleCloseGuide} />
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </AppLayout>
   );

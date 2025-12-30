@@ -19,6 +19,7 @@ const NewSplitButton: React.FC = () => {
     >
       <Link 
         to="/new-split"
+        data-tutorial="new-split-button"
         className="flex items-center justify-center h-14 w-14 bg-primary rounded-full shadow-medium text-primary-foreground hover:shadow-strong transition-all duration-300"
       >
         <Plus className="h-7 w-7" />

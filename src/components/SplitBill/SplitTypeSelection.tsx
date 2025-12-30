@@ -21,7 +21,7 @@ const SplitTypeSelection: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <Link to="/quick-split">
+            <Link to="/quick-split" data-tutorial="quick-split-option">
               <Card className="p-5 hover:bg-accent/50 transition-colors">
                 <div className="flex items-center gap-4">
                   <div className="bg-primary/10 p-3 rounded-full">
