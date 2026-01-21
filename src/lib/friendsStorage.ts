@@ -1,11 +1,18 @@
-
 import { Participant } from "./types";
+import { safeParseParticipants } from "./storageSchemas";
 
 const FRIENDS_STORAGE_KEY = "splitBillFriends";
 
 export const getFriends = (): Participant[] => {
-  const storedFriends = localStorage.getItem(FRIENDS_STORAGE_KEY);
-  return storedFriends ? JSON.parse(storedFriends) : [];
+  try {
+    const storedFriends = localStorage.getItem(FRIENDS_STORAGE_KEY);
+    if (!storedFriends) return [];
+    const parsed = JSON.parse(storedFriends);
+    return safeParseParticipants(parsed, 'friends');
+  } catch (error) {
+    console.error("Error loading friends:", error);
+    return [];
+  }
 };
 
 export const saveFriend = (friend: Participant): Participant[] => {

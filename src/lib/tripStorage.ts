@@ -1,13 +1,20 @@
-
 import { Trip } from "./types";
 import { generateId } from "./utils";
+import { safeParseTrips } from "./storageSchemas";
 
 const TRIPS_STORAGE_KEY = "splitTrips";
 
-// Get all trips from storage
+// Get all trips from storage with schema validation
 export const getTrips = (): Trip[] => {
-  const storedTrips = localStorage.getItem(TRIPS_STORAGE_KEY);
-  return storedTrips ? JSON.parse(storedTrips) : [];
+  try {
+    const storedTrips = localStorage.getItem(TRIPS_STORAGE_KEY);
+    if (!storedTrips) return [];
+    const parsed = JSON.parse(storedTrips);
+    return safeParseTrips(parsed, 'trips');
+  } catch (error) {
+    console.error("Error loading trips:", error);
+    return [];
+  }
 };
 
 // Get a specific trip by ID

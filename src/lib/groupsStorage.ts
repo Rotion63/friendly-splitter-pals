@@ -1,13 +1,20 @@
-
 import { FriendGroup, Participant } from "./types";
 import { generateId } from "./utils";
+import { safeParseGroups } from "./storageSchemas";
 
 const GROUPS_STORAGE_KEY = "splitBillGroups";
 
-// Get all groups from storage
+// Get all groups from storage with schema validation
 export const getGroups = (): FriendGroup[] => {
-  const storedGroups = localStorage.getItem(GROUPS_STORAGE_KEY);
-  return storedGroups ? JSON.parse(storedGroups) : [];
+  try {
+    const storedGroups = localStorage.getItem(GROUPS_STORAGE_KEY);
+    if (!storedGroups) return [];
+    const parsed = JSON.parse(storedGroups);
+    return safeParseGroups(parsed, 'groups');
+  } catch (error) {
+    console.error("Error loading groups:", error);
+    return [];
+  }
 };
 
 // Get a specific group by ID
