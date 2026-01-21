@@ -1,13 +1,20 @@
-
 import { Place, MenuItem, Participant, PlaceDay } from "./types";
 import { generateId } from "./utils";
+import { safeParsePlaces } from "./storageSchemas";
 
 const PLACES_STORAGE_KEY = "splitBillPlaces";
 
-// Get all places from storage
+// Get all places from storage with schema validation
 export const getPlaces = (): Place[] => {
-  const storedPlaces = localStorage.getItem(PLACES_STORAGE_KEY);
-  return storedPlaces ? JSON.parse(storedPlaces) : [];
+  try {
+    const storedPlaces = localStorage.getItem(PLACES_STORAGE_KEY);
+    if (!storedPlaces) return [];
+    const parsed = JSON.parse(storedPlaces);
+    return safeParsePlaces(parsed, 'places');
+  } catch (error) {
+    console.error("Error loading places:", error);
+    return [];
+  }
 };
 
 // Get a specific place by ID

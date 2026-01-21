@@ -1,14 +1,16 @@
-
 import { Bill, Participant, BillItem } from "./types";
 import { v4 as uuidv4 } from 'uuid';
+import { safeParseBills, safeParseParticipants } from "./storageSchemas";
 
 /**
- * Get all bills from localStorage
+ * Get all bills from localStorage with schema validation
  */
 export const getBills = (): Bill[] => {
   try {
     const billsString = localStorage.getItem('bills');
-    return billsString ? JSON.parse(billsString) : [];
+    if (!billsString) return [];
+    const parsed = JSON.parse(billsString);
+    return safeParseBills(parsed, 'bills');
   } catch (error) {
     console.error("Error loading bills:", error);
     return [];
@@ -143,10 +145,17 @@ export const createEmptyBill = (
   return newBill;
 };
 
-// Friends Storage
+// Friends Storage with schema validation
 export const getFriends = (): Participant[] => {
-  const friendsString = localStorage.getItem('friends');
-  return friendsString ? JSON.parse(friendsString) : [];
+  try {
+    const friendsString = localStorage.getItem('friends');
+    if (!friendsString) return [];
+    const parsed = JSON.parse(friendsString);
+    return safeParseParticipants(parsed, 'friends');
+  } catch (error) {
+    console.error("Error loading friends:", error);
+    return [];
+  }
 };
 
 export const saveFriend = (friend: Participant): void => {

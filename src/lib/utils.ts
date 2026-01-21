@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { Bill, Participant, PartialPayment, Currency, Trip } from "./types";
+import { safeParseCurrency } from "./storageSchemas";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -27,14 +28,15 @@ export function setActiveCurrency(currency: Currency) {
 }
 
 export function getActiveCurrency(): Currency {
-  // Try to load from localStorage
+  // Try to load from localStorage with schema validation
   const savedCurrency = localStorage.getItem('active-currency');
   if (savedCurrency) {
     try {
       const parsed = JSON.parse(savedCurrency);
-      if (parsed && parsed.code && parsed.symbol && parsed.name) {
+      const validatedCurrency = safeParseCurrency(parsed, 'currency');
+      if (validatedCurrency) {
         // Ensure it's one of our three currencies
-        const foundCurrency = currencies.find(c => c.code === parsed.code);
+        const foundCurrency = currencies.find(c => c.code === validatedCurrency.code);
         if (foundCurrency) {
           activeCurrency = foundCurrency;
         }
