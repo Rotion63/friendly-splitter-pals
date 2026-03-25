@@ -49,23 +49,28 @@ const TripManager: React.FC<TripManagerProps> = ({
   };
   
   const handleAddParticipant = (name: string) => {
-    // Create new participant
     const newParticipant: Participant = {
       id: generateId("friend-"),
       name: name.trim()
     };
     
-    // Save to friends list
     saveFriend(newParticipant);
-    
-    // Add to available participants
-    setAvailableParticipants([...availableParticipants, newParticipant]);
+    setAvailableParticipants(prev => [...prev, newParticipant]);
     
     toast.success(t("Participant added", "सहभागी थपियो"));
     setShowAddParticipantDialog(false);
   };
   
   const handleSelectGroup = (group: FriendGroup) => {
+    // Add group members that aren't already in availableParticipants
+    const newMembers = group.members.filter(
+      member => !availableParticipants.some(p => p.id === member.id)
+    );
+    if (newMembers.length > 0) {
+      // Save new members as friends too
+      newMembers.forEach(member => saveFriend(member));
+      setAvailableParticipants(prev => [...prev, ...newMembers]);
+    }
     setShowSelectGroupDialog(false);
     toast.success(`${t("Group", "समूह")} "${group.name}" ${t("members added", "सदस्यहरू थपियो")}`);
   };

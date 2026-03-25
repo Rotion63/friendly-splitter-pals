@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Users, UserPlus } from "lucide-react";
+import { Users, UserPlus, Check } from "lucide-react";
 import { Trip, Participant, FriendGroup } from "@/lib/types";
 import { saveTrip } from "@/lib/tripStorage";
 import { useNavigate } from "react-router-dom";
@@ -50,23 +50,19 @@ const NewTripForm: React.FC<NewTripFormProps> = ({
       ).map(p => ({
         ...p,
         initialContribution: participantContributions[p.id] || 0,
-        balance: 0 // Initialize balance at 0
+        balance: 0
       })),
       bills: []
     };
     
     saveTrip(newTrip);
     toast.success("Trip created successfully");
-    
-    // Navigate to the trip details
     navigate(`/trip/${newTrip.id}`);
   };
   
   const toggleParticipant = (participantId: string) => {
     if (selectedParticipants.includes(participantId)) {
       setSelectedParticipants(selectedParticipants.filter(id => id !== participantId));
-      
-      // Remove contribution
       const updatedContributions = { ...participantContributions };
       delete updatedContributions[participantId];
       setParticipantContributions(updatedContributions);
@@ -88,59 +84,62 @@ const NewTripForm: React.FC<NewTripFormProps> = ({
   const getTotalContributions = () => {
     return Object.values(participantContributions).reduce((sum, amount) => sum + amount, 0);
   };
+
+  const unselectedParticipants = availableParticipants.filter(
+    p => !selectedParticipants.includes(p.id)
+  );
   
   return (
-    <div className="bg-white rounded-lg p-4 shadow-sm space-y-4">
-      <h3 className="text-lg font-medium">Create New Trip</h3>
+    <div className="bg-card rounded-lg p-4 shadow-sm space-y-4">
+      <h3 className="text-lg font-medium">{t("Create New Trip", "नयाँ यात्रा सिर्जना गर्नुहोस्")}</h3>
       
       <div>
         <label className="block text-sm font-medium mb-1">
-          Trip Name *
+          {t("Trip Name *", "यात्राको नाम *")}
         </label>
         <input
           type="text"
           value={newTripName}
           onChange={(e) => setNewTripName(e.target.value)}
-          className="w-full p-2 rounded-md border"
-          placeholder="Summer vacation, Business trip, etc."
+          className="w-full p-2 rounded-md border bg-background"
+          placeholder={t("Summer vacation, Business trip, etc.", "गृष्मकालीन बिदा, व्यापार यात्रा, आदि।")}
         />
       </div>
       
       <div>
         <label className="block text-sm font-medium mb-1">
-          Description
+          {t("Description", "विवरण")}
         </label>
         <textarea
           value={newTripDescription}
           onChange={(e) => setNewTripDescription(e.target.value)}
-          className="w-full p-2 rounded-md border"
+          className="w-full p-2 rounded-md border bg-background"
           rows={2}
-          placeholder="Optional description"
+          placeholder={t("Optional description", "वैकल्पिक विवरण")}
         />
       </div>
       
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">
-            Start Date
+            {t("Start Date", "सुरु मिति")}
           </label>
           <input
             type="date"
             value={newTripStartDate}
             onChange={(e) => setNewTripStartDate(e.target.value)}
-            className="w-full p-2 rounded-md border"
+            className="w-full p-2 rounded-md border bg-background"
           />
         </div>
-        
         <div>
           <label className="block text-sm font-medium mb-1">
-            End Date
+            {t("End Date", "अन्त्य मिति")}
           </label>
           <input
             type="date"
             value={newTripEndDate}
             onChange={(e) => setNewTripEndDate(e.target.value)}
-            className="w-full p-2 rounded-md border"
+            className="w-full p-2 rounded-md border bg-background"
           />
         </div>
       </div>
@@ -148,7 +147,7 @@ const NewTripForm: React.FC<NewTripFormProps> = ({
       <div>
         <div className="flex justify-between items-center mb-2">
           <label className="block text-sm font-medium">
-            Participants
+            {t("Participants", "सहभागीहरू")}
           </label>
           <div className="space-x-2">
             <Button 
@@ -169,6 +168,31 @@ const NewTripForm: React.FC<NewTripFormProps> = ({
             </Button>
           </div>
         </div>
+
+        {/* Available friends to select */}
+        {unselectedParticipants.length > 0 && (
+          <div className="mb-3">
+            <p className="text-xs text-muted-foreground mb-2">
+              {t("Tap to add:", "थप्न ट्याप गर्नुहोस्:")}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {unselectedParticipants.map(p => (
+                <Button
+                  key={p.id}
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  onClick={() => toggleParticipant(p.id)}
+                >
+                  <UserPlus className="h-3 w-3 mr-1" />
+                  {p.name}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Selected participants with contributions */}
         {selectedParticipants.length > 0 ? (
           <div className="border rounded-md divide-y">
             {selectedParticipants.map(participantId => {
@@ -178,7 +202,10 @@ const NewTripForm: React.FC<NewTripFormProps> = ({
               return (
                 <div key={participant.id} className="p-3">
                   <div className="flex justify-between items-center mb-2">
-                    <span>{participant.name}</span>
+                    <div className="flex items-center gap-1">
+                      <Check className="h-4 w-4 text-primary" />
+                      <span>{participant.name}</span>
+                    </div>
                     <Button 
                       variant="ghost" 
                       size="sm" 
@@ -221,17 +248,14 @@ const NewTripForm: React.FC<NewTripFormProps> = ({
       </div>
       
       <div className="flex justify-end space-x-2 pt-2">
-        <Button 
-          variant="outline" 
-          onClick={onCancel}
-        >
-          Cancel
+        <Button variant="outline" onClick={onCancel}>
+          {t("Cancel", "रद्द गर्नुहोस्")}
         </Button>
         <Button 
           onClick={handleCreateTrip}
           disabled={!newTripName.trim() || selectedParticipants.length === 0}
         >
-          Create Trip
+          {t("Create Trip", "यात्रा सिर्जना गर्नुहोस्")}
         </Button>
       </div>
     </div>
